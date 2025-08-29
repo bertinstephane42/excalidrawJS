@@ -1,0 +1,7 @@
+# Empêche l'accès direct aux fichiers PHP
+<Files *.php>
+  Require all denied
+</Files>
+
+# Ou pour Apache <2.4
+Deny from all
