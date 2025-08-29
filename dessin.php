@@ -304,37 +304,44 @@ include __DIR__ . '/inc/header.php';
 	let isDrawingGrid = false;
 
 	function drawGrid() {
-	  if (gridLines.length) {
-		isDrawingGrid = true;
-		gridLines.forEach(line => canvas.remove(line));
-		gridLines = [];
-		isDrawingGrid = false;
-	  }
+	  // Supprimer les anciennes lignes de grille
+	  gridLines.forEach(line => canvas.remove(line));
+	  gridLines = [];
 
 	  const width = Math.floor(canvas.getWidth());
 	  const height = Math.floor(canvas.getHeight());
-	  isDrawingGrid = true;
 
 	  const cols = Math.floor(width / grid);
 	  const rows = Math.floor(height / grid);
 
+	  // Colonnes
 	  for (let i = 0; i <= cols; i++) {
 		const x = i * grid;
 		const line = new fabric.Line([x, 0, x, height], {
-		  stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true
+		  stroke: '#ccc',
+		  selectable: false,
+		  evented: false,
+		  excludeFromExport: true
 		});
 		canvas.add(line);
 		gridLines.push(line);
 	  }
+
+	  // Lignes
 	  for (let i = 0; i <= rows; i++) {
 		const y = i * grid;
 		const line = new fabric.Line([0, y, width, y], {
-		  stroke: '#ccc', selectable: false, evented: false, excludeFromExport: true
+		  stroke: '#ccc',
+		  selectable: false,
+		  evented: false,
+		  excludeFromExport: true
 		});
 		canvas.add(line);
 		gridLines.push(line);
 	  }
-	  isDrawingGrid = false;
+
+	  // Toujours renvoyer la grille en arrière-plan
+	  gridLines.forEach(line => line.sendToBack());
 	}
 
 	function saveState(){
@@ -1156,31 +1163,30 @@ applySize(width, height);
 	});
 
 	// Bouton Réinitialiser
-	document.getElementById('resetCanvas').addEventListener('click', ()=>{
-		if(confirm("Voulez-vous vraiment réinitialiser la grille et effacer tout le dessin ?")){
-			// Vider tous les objets du canvas
-			canvas.clear();
+	document.getElementById('resetCanvas').addEventListener('click', () => {
+	  if (!confirm("Voulez-vous vraiment réinitialiser la grille et effacer tout le dessin ?")) return;
 
-			// Remettre le fond blanc
-			canvas.setBackgroundColor('#ffffff', canvas.renderAll.bind(canvas));
-			
-			// Réinitialiser le zoom
-			canvas.setViewportTransform([1, 0, 0, 1, 0, 0]); // équivalent à zoom 1, sans décalage
-			// ou bien : canvas.setZoom(1);
+	  // 1) Supprimer proprement sans rater d’objets
+	  canvas.getObjects().slice().forEach(obj => {
+		if (!obj.excludeFromExport) canvas.remove(obj);
+	  });
 
-			// Redimensionner à la taille initiale
-			const { width, height } = calculateOptimalSize();
-			canvas.setDimensions({ width, height });
+	  // 2) État visuel neutre
+	  canvas.setBackgroundColor('#ffffff', canvas.renderAll.bind(canvas));
+	  canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
 
-			// Redessiner la grille
-			drawGrid();
+	  // 3) Recalcule taille + grille via tes helpers
+	  const { width, height } = calculateOptimalSize();
+	  applySize(width, height); // (appel déjà drawGrid() + renderAll() dans ton code)
 
-			// Rendu final
-			canvas.renderAll();
-
-			// Sauvegarder l'état initial
-			saveState();
-		}
+	  // 4) Réinitialiser l’historique (évite des “undo” vers des objets fantômes)
+	  undoStack.length = 0;
+	  redoStack.length = 0;
+	  isRestoring = false;
+	  saveState();
+	    // 5) Important : permettre de ré-importer le même fichier ensuite
+	  const fileInput = document.getElementById('importJSON');
+	  if (fileInput) fileInput.value = '';
 	});
 	
 	// --- Appliquer la police à un texte sélectionné ---
