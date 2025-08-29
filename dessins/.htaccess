@@ -1,0 +1,4 @@
+Options -Indexes
+<FilesMatch "\.(svg|png)$">
+    Require all denied
+</FilesMatch>
