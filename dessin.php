@@ -132,21 +132,26 @@ include __DIR__ . '/inc/header.php';
   width: 100%; height: 100%;
   background-color: rgba(0,0,0,0.6);
 }
+
 .modal-content {
   background: #f8fafc;
-  margin: 10% auto;
+  margin: 5% auto;          /* réduit un peu la marge pour plus d'espace */
   padding: 1rem 2rem;
   border-radius: 1rem;
   width: 90%;
   max-width: 500px;
+  max-height: 80%;           /* limite la hauteur à 80% de l'écran */
+  overflow-y: auto;          /* active l'ascenseur vertical si besoin */
   color: #0f172a;
   box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
+
 .close {
   float: right;
   font-size: 1.5rem;
   cursor: pointer;
 }
+
 .close:hover {
   color: red;
 }
@@ -228,7 +233,7 @@ include __DIR__ . '/inc/header.php';
     <span id="statusTool">Outil : Sélection</span>
     <span id="statusDim">0 × 0</span>
   </div>
-  <div id="helpModal" class="modal">
+ <div id="helpModal" class="modal">
   <div class="modal-content">
     <span id="closeHelp" class="close">&times;</span>
     <h2>Guide des outils</h2>
@@ -239,7 +244,7 @@ include __DIR__ . '/inc/header.php';
       <li><b>🔷 Losange :</b> dessiner un losange (forme en diamant).</li>
       <li><b>🔤 Texte :</b> insérer du texte éditable.</li>
       <li><b>✏️ Crayon :</b> dessiner à main levée.</li>
-      <li><b>➔ Flèche :</b> dessiner une flèche simple ou courbée.</li>
+      <li><b>➔ Flèche :</b> dessiner une flèche droite, courbée ou en angle.</li>
       <li><b>📋 Dupliquer :</b> copier un objet sélectionné.</li>
       <li><b>⏫ Amener au premier plan :</b> placer l’objet sélectionné au-dessus des autres.</li>
       <li><b>⏬ Renvoyer à l’arrière :</b> placer l’objet sélectionné derrière les autres.</li>
@@ -247,6 +252,24 @@ include __DIR__ . '/inc/header.php';
       <li><b>⬆ Export :</b> sauvegarder en PNG / JSON.</li>
       <li><b>⬇ Import :</b> recharger un dessin JSON sauvegardé.</li>
     </ul>
+
+    <h3>⚡ Raccourcis & touches spéciales</h3>
+    <ul>
+      <li><b>SHIFT + Molette de souris :</b> zoom avant/arrière.</li>
+      <li><b>SHIFT + redimensionnement :</b> conserver les proportions d’un objet.</li>
+      <li><b>CTRL + C / CTRL + V :</b> copier-coller un objet sélectionné.</li>
+      <li><b>DEL / SUPPR :</b> supprimer l’objet sélectionné.</li>
+      <li><b>CTRL + Z :</b> annuler la dernière action.</li>
+      <li><b>CTRL + Y :</b> rétablir une action annulée.</li>
+      <li><b>Flèches clavier :</b> déplacer finement l’objet sélectionné (par pas de 1px).</li>
+      <li><b>SHIFT + Flèches :</b> déplacement rapide (par pas de 10px).</li>
+	  <li><b>Export :</b> sauvegarder en PNG / SVG / JSON.</li>
+	  <li><b>ALT + lettre :</b> changer rapidement d’outil (ALT+R Rectangle, ALT+C Cercle, ALT+L Ligne, ALT+T Texte, ALT+S Sélection, ALT+P Pinceau).</li>
+    </ul>
+
+    <p style="margin-top:10px; font-size:0.9em; color:#666;">
+      Astuce : combine les outils et raccourcis pour gagner du temps (ex. ALT pour te déplacer pendant que tu ajoutes plusieurs formes).
+    </p>
   </div>
 </div>
 </div>
@@ -747,7 +770,26 @@ applySize(width, height);
 			return new fabric.Group([path, arrowHead], { selectable: true });
 		}
 	}
+	
+	canvas.on('mouse:wheel', function(opt) {
+		const evt = opt.e;
 
+		// Zoom uniquement si ALT est appuyé
+		if (!evt.shiftKey) return;
+
+		evt.preventDefault();  // empêche le scroll de la page
+		evt.stopPropagation();
+
+		const delta = evt.deltaY;
+		let zoom = canvas.getZoom();
+		zoom *= 0.999 ** delta; // ajustement sensible du zoom
+
+		// Limites du zoom
+		if (zoom > 20) zoom = 20;
+		if (zoom < 0.1) zoom = 0.1;
+
+		canvas.zoomToPoint({ x: evt.offsetX, y: evt.offsetY }, zoom);
+	});
 
   toolbar.addEventListener('click', (e)=>{
     const btn = e.target.closest('button.tool');
@@ -767,7 +809,13 @@ applySize(width, height);
 	function loadFrom(json){
 	  isRestoring = true;
 	  canvas.loadFromJSON(json, ()=>{
-		drawGrid();         // ← rajouté
+		drawGrid(); // redessiner la grille
+		// Mettre la grille à l'arrière
+		gridLines.forEach(line => line.sendToBack());
+		// Tous les objets (hors grille) devant
+		canvas.getObjects().forEach(obj => {
+		  if (!obj.excludeFromExport) obj.bringToFront();
+		});
 		canvas.renderAll();
 		isRestoring = false;
 	  });
@@ -917,6 +965,37 @@ applySize(width, height);
 				e.preventDefault();
 				setActiveTool(map[k]);
 			}
+		}
+		if (!active) return;
+
+		let step = 1; // par défaut
+		if (e.shiftKey) step = 10;
+
+		switch(e.key){
+			case 'ArrowUp':
+				e.preventDefault();
+				active.top -= step;
+				active.setCoords();
+				canvas.requestRenderAll();
+				break;
+			case 'ArrowDown':
+				e.preventDefault();
+				active.top += step;
+				active.setCoords();
+				canvas.requestRenderAll();
+				break;
+			case 'ArrowLeft':
+				e.preventDefault();
+				active.left -= step;
+				active.setCoords();
+				canvas.requestRenderAll();
+				break;
+			case 'ArrowRight':
+				e.preventDefault();
+				active.left += step;
+				active.setCoords();
+				canvas.requestRenderAll();
+				break;
 		}
 	});
 
