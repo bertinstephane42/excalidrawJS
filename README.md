@@ -170,7 +170,6 @@ Voir [LICENSE](LICENSE) pour plus de détails.
 ---
 
 ## Remarques
-
 * Optimisé pour une utilisation pédagogique ou rapide de diagrammes
 * Ne gère pas encore les fonctionnalités avancées type Excalidraw : export en PDF, collaboration en temps réel
 * La sécurité des fichiers importés/exportés doit être vérifiée si déployé en production
