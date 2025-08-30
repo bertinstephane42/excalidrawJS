@@ -10,7 +10,13 @@ if (!isLoggedIn()) {
     exit;
 }
 
-// Reste du code inchangé
+if (($_SESSION['role'] ?? '') !== 'admin') {
+    http_response_code(403);
+    echo "Accès refusé : non administrateur";
+    exit;
+}
+
+// Dossier de sauvegarde
 $dir = __DIR__ . "/dessins";
 if (!is_dir($dir)) {
     if (!mkdir($dir, 0775, true)) {
@@ -20,14 +26,8 @@ if (!is_dir($dir)) {
     }
 }
 
-// Vérification rôle admin
-/*if (!isAdmin()) {
-    http_response_code(403);
-    echo "Accès refusé : non administrateur";
-    exit;
-}*/
-
-$type = $_POST['type'] ?? 'png';
+// Données reçues
+$type = strtolower($_POST['type'] ?? 'png');
 $data = $_POST['data'] ?? '';
 
 if (!$data) {
@@ -36,24 +36,43 @@ if (!$data) {
     exit;
 }
 
+// Nom de fichier sécurisé
 $filenameBase = $_POST['filename'] ?? 'dessin';
 $filenameBase = preg_replace('/[^a-zA-Z0-9_-]/', '_', $filenameBase);
-$filename = $filenameBase . "-" . date("Y-m-d_H-i-s") . "." . $type;
+$ext = match($type) {
+    'png' => 'png',
+    'svg' => 'svg',
+    'json' => 'json',
+    default => null,
+};
+if (!$ext) {
+    http_response_code(400);
+    echo "Type de fichier non supporté";
+    exit;
+}
+$filename = $filenameBase . "-" . date("Y-m-d_H-i-s") . "." . $ext;
 $path = $dir . "/" . $filename;
 
 try {
-    if ($type === 'png') {
-        $data = preg_replace('#^data:image/\w+;base64,#i', '', $data);
-        $data = base64_decode($data);
-        if ($data === false) {
-            throw new Exception("Erreur de décodage Base64");
-        }
-    } elseif ($type === 'svg') {
-        // SVG brut, rien à faire
-    } else {
-        http_response_code(400);
-        echo "Type de fichier non supporté";
-        exit;
+    switch ($type) {
+        case 'png':
+            // Décodage Base64
+            $data = preg_replace('#^data:image/\w+;base64,#i', '', $data);
+            $data = base64_decode($data);
+            if ($data === false) throw new Exception("Erreur de décodage Base64");
+            break;
+
+        case 'svg':
+            // SVG brut, rien à faire
+            break;
+
+        case 'json':
+            // Vérifie si le JSON est valide
+            json_decode($data);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new Exception("JSON invalide : " . json_last_error_msg());
+            }
+            break;
     }
 
     if (file_put_contents($path, $data) === false) {

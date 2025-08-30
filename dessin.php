@@ -1141,7 +1141,7 @@ applySize(width, height);
 	  URL.revokeObjectURL(url);
 
 	  // Copie côté serveur si besoin
-	  //saveToServer("json", jsonStr);
+	  saveToServer("json", jsonStr);
 	});
 
   // Sélection par défaut
