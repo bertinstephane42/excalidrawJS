@@ -1,4 +1,4 @@
 Options -Indexes
-<FilesMatch "\.(svg|png)$">
+<FilesMatch "\.(svg|png|json)$">
     Require all denied
 </FilesMatch>
