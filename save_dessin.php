@@ -20,6 +20,13 @@ if (!is_dir($dir)) {
     }
 }
 
+// Vérification rôle admin
+/*if (!isAdmin()) {
+    http_response_code(403);
+    echo "Accès refusé : non administrateur";
+    exit;
+}*/
+
 $type = $_POST['type'] ?? 'png';
 $data = $_POST['data'] ?? '';
 

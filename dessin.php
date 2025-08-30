@@ -270,6 +270,10 @@ include __DIR__ . '/inc/header.php';
     <p style="margin-top:10px; font-size:0.9em; color:#666;">
       Astuce : combine les outils et raccourcis pour gagner du temps (ex. ALT pour te déplacer pendant que tu ajoutes plusieurs formes).
     </p>
+	
+	<p style="margin-top:10px; font-size:0.9em; color:#d33; font-weight:bold;">
+      ⚠️ Important : avant de quitter la page, cliquez sur le bouton "Réinitialiser" pour vider le dessin en cours. Si vous quittez sans réinitialiser, un message vous avertira que vos données pourraient ne pas être sauvegardées correctement.
+    </p>
   </div>
 </div>
 </div>
@@ -379,6 +383,7 @@ applySize(width, height);
   let lastPosY = 0;
   let typeFleche = 'straight';
   let isEditingText = false;
+  let jsonReset = false;
   
 	const strokeColor = document.getElementById('strokeColor');
 	const fillColor = document.getElementById('fillColor');
@@ -393,28 +398,6 @@ applySize(width, height);
 
 	canvas.on('text:editing:exited', () => { 
 		isEditingText = false; 
-	});
-  
-  document.getElementById('exportJSON').addEventListener('click', () => {
-	  // Sérialisation du canvas en JSON
-	  const json = canvas.toJSON();
-
-	  // Conversion en chaîne
-	  const jsonStr = JSON.stringify(json, null, 2);
-
-	  // Création d'un fichier téléchargeable
-	  const blob = new Blob([jsonStr], {type: "application/json"});
-	  const url = URL.createObjectURL(blob);
-
-	  const a = document.createElement('a');
-	  a.href = url;
-	  const now = new Date();
-	  const filename = `dessin_${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}.json`;
-	  a.download = filename;
-	  document.body.appendChild(a);
-	  a.click();
-	  document.body.removeChild(a);
-	  URL.revokeObjectURL(url);
 	});
 
 	// Appliquer la police lors de la création d'un texte
@@ -1029,37 +1012,86 @@ applySize(width, height);
 		.then(console.log);
 	}
 
-  // Export PNG
-  function download(filename, dataUrl){
-    const a = document.createElement('a');
-    a.href = dataUrl; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  }
+	// Fonction utilitaire pour générer le nom de fichier
+	function generateFilename(extension) {
+	  const prefix = document.getElementById('filenameInput').value.trim() || 'dessin';
+	  const datePart = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+	  return `${prefix}-${datePart}.${extension}`;
+	}
+
+	// Fonction générique de téléchargement
+	function download(filename, dataUrl){
+	  const a = document.createElement('a');
+	  a.href = dataUrl;
+	  a.download = filename;
+	  document.body.appendChild(a);
+	  a.click();
+	  document.body.removeChild(a);
+	}
+
 	// Export PNG
 	document.getElementById('exportPNG').addEventListener('click', () => {
-		const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 2, enableRetinaScaling: true });
-		const filename = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '-dessin.png';
+		if (!confirm("Voulez-vous vraiment exporter ce dessin en PNG ?")) {
+			return;
+		  }
+	  const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 2, enableRetinaScaling: true });
+	  const filename = generateFilename("png");
 
-		// Téléchargement côté client
-		download(filename, dataUrl);
+	  // Téléchargement côté client
+	  download(filename, dataUrl);
 
-		// Copie côté serveur
-		saveToServer("png", dataUrl);
+	  // Copie côté serveur
+	  saveToServer("png", dataUrl);
 	});
 
 	// Export SVG
 	document.getElementById('exportSVG').addEventListener('click', () => {
-		const svg = canvas.toSVG();
-		const filename = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '-dessin.svg';
-		const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-		const url = URL.createObjectURL(blob);
+		if (!confirm("Voulez-vous vraiment exporter ce dessin en SVG ?")) {
+			return;
+		}
+	  const svg = canvas.toSVG();
+	  const filename = generateFilename("svg");
+	  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+	  const url = URL.createObjectURL(blob);
 
-		// Téléchargement côté client
-		download(filename, url);
+	  // Téléchargement côté client
+	  download(filename, url);
 
-		// Copie côté serveur (SVG en texte brut)
-		saveToServer("svg", svg);
+	  // Copie côté serveur (SVG en texte brut)
+	  saveToServer("svg", svg);
 
-		setTimeout(() => URL.revokeObjectURL(url), 1000);
+	  setTimeout(() => URL.revokeObjectURL(url), 1000);
+	});
+
+	document.getElementById('exportJSON').addEventListener('click', () => {
+		if (!confirm("Voulez-vous vraiment exporter ce dessin en JSON ?")) {
+			return;
+		}
+	  // Sérialisation du canvas en JSON
+	  const json = canvas.toJSON();
+
+	  // Conversion en chaîne
+	  const jsonStr = JSON.stringify(json, null, 2);
+
+	  // Création d'un fichier téléchargeable
+	  const blob = new Blob([jsonStr], {type: "application/json"});
+	  const url = URL.createObjectURL(blob);
+
+	  // Nom de fichier avec préfixe + date
+	  const filename = generateFilename("json");
+
+	  // Téléchargement
+	  const a = document.createElement('a');
+	  a.href = url;
+	  a.download = filename;
+	  document.body.appendChild(a);
+	  a.click();
+	  document.body.removeChild(a);
+
+	  URL.revokeObjectURL(url);
+
+	  // Copie côté serveur si besoin
+	  //saveToServer("json", jsonStr);
 	});
 
   // Sélection par défaut
@@ -1126,6 +1158,9 @@ applySize(width, height);
 
 	// Lorsqu'un fichier est sélectionné
 	document.getElementById('importJSON').addEventListener('change', (e) => {
+		if (!confirm("Voulez-vous vraiment importer ce dessin en JSON ?")) {
+			return;
+		}
 	  const file = e.target.files[0];
 	  if (!file) return;
 
@@ -1187,6 +1222,8 @@ applySize(width, height);
 	    // 5) Important : permettre de ré-importer le même fichier ensuite
 	  const fileInput = document.getElementById('importJSON');
 	  if (fileInput) fileInput.value = '';
+	  //
+	  	jsonReset = true;
 	});
 	
 	// --- Appliquer la police à un texte sélectionné ---
@@ -1227,6 +1264,56 @@ applySize(width, height);
 				}
 			}
 		});
+	});
+
+let saveTimeout;
+const SAVE_INTERVAL = 2000; // ms
+
+function saveJsonRealtime() {
+  // Sauvegarde seulement si admin
+  if (currentRole !== 'admin') return;
+
+  if (saveTimeout) clearTimeout(saveTimeout);
+
+  saveTimeout = setTimeout(() => {
+    const json = canvas.toDatalessJSON();
+    const jsonStr = JSON.stringify(json);
+
+    const formData = new FormData();
+    formData.append('data', jsonStr);
+
+    fetch("save_json.php", {
+      method: "POST",
+      body: formData
+    })
+    .catch(err => console.error("Erreur sauvegarde JSON:", err));
+  }, SAVE_INTERVAL);
+}
+
+// Événements pour déclencher la sauvegarde et remettre jsonReset à false
+['object:added','object:modified','object:removed'].forEach(evt => {
+  canvas.on(evt, function(e) {
+    saveJsonRealtime();
+    jsonReset = false;
+  });
+});
+
+	// On garde les événements mais avec throttling
+	['object:added','object:modified','object:removed'].forEach(evt => {
+  canvas.on(evt, function(e) {
+    saveJsonRealtime(e);  // Appel de ta fonction de sauvegarde
+    jsonReset = false;     // Remise à false à chaque modification
+  });
+});
+
+	// Avant de quitter la page
+	window.addEventListener('beforeunload', (e) => {
+		if (!jsonReset) {
+			// Message personnalisé souvent ignoré par les navigateurs modernes
+			e.preventDefault();
+			e.returnValue = '';
+			return '';
+		}
 	});
 	
 	// Modale d'aide

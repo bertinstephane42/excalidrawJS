@@ -14,6 +14,7 @@ include 'inc/header.php';
 
     <div class="dashboard-buttons">
         <a class="dash-btn" href="dessin.php">Ouvrir l'éditeur de dessin</a>
+         <a class="dash-btn" href="voir.php">Voir le live</a>
         <a class="dash-btn" href="fichiers.php">Voir les dessins enregistrés</a>
         <a class="dash-btn logout" href="logout.php">Se déconnecter</a>
     </div>
