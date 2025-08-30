@@ -28,9 +28,9 @@ const canvas = new fabric.Canvas('c', {
 });
 
 let lastJSON = null;        // Pour comparer les changements
-let interval = 2000;        // Intervalle initial en ms
+let interval = 1000;        // Intervalle initial en ms
 let inactivityTime = 0;     // Temps d'inactivité en ms
-const baseInterval = 2000;  
+const baseInterval = 1000;  
 
 async function loadJSON() {
     try {

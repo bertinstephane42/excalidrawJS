@@ -156,6 +156,18 @@ include __DIR__ . '/inc/header.php';
   color: red;
 }
 
+.text-style-buttons button {
+  width: 30px;
+  height: 30px;
+  margin: 0 2px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.text-style-buttons button.active {
+  background-color: #4f46e5; /* exemple violet actif */
+  color: white;
+}
+
 </style>
 
 <div class="editor-wrap">
@@ -183,20 +195,39 @@ include __DIR__ . '/inc/header.php';
       <label>Trait <input id="strokeColor" type="color" class="color-input" value="#1f2937"></label>
       <label>Rempl. <input id="fillColor" type="color" class="color-input" value="#ffffff"></label>
       <label>Épaisseur <input id="strokeWidth" type="range" class="range" min="1" max="20" value="2"></label>
-      <label><input type="checkbox" id="noFill"> Sans remplissage</label>
-	  <label>Police 
-		  <select id="fontFamily">
-			<option value="Arial" selected>Arial</option>
-			<option value="Helvetica">Helvetica</option>
-			<option value="Times New Roman">Times New Roman</option>
-			<option value="Courier New">Courier New</option>
-			<option value="Verdana">Verdana</option>
-			<option value="Georgia">Georgia</option>
-			<option value="Comic Sans MS">Comic Sans MS</option>
-		  </select>
-	</label>
+	  <label><input type="checkbox" id="noFill"> Sans remplissage</label>
+	</div>
+	<div class="group" aria-label="Texte">
+	  <!-- Police -->
+	  <label>Police
+		<select id="fontFamily">
+		  <option value="Arial" selected>Arial</option>
+		  <option value="Times New Roman">Times New Roman</option>
+		  <option value="Courier New">Courier New</option>
+		  <option value="Tahoma">Tahoma</option>
+		  <option value="Georgia">Georgia</option>
+		  <option value="Comic Sans MS">Comic Sans MS</option>
+		  <option value="Impact">Impact</option>
+		</select>
+	  </label>
 
-    </div>
+	  <!-- Taille -->
+	  <label>Taille
+		<select id="fontSize">
+		  <option value="12">Tiny</option>
+		  <option value="16" selected>Normal</option>
+		  <option value="24">XL</option>
+		</select>
+	  </label>
+
+	  <!-- Style -->
+	  <label>Style</label>
+	  <div class="text-style-buttons">
+		<button id="boldBtn" title="Gras"><b>B</b></button>
+		<button id="italicBtn" title="Italique"><i>I</i></button>
+		<button id="normalBtn" title="Normal">A</button>
+	  </div>
+	</div>
 
     <!-- Calques -->
     <div class="group" aria-label="Calques">
@@ -423,15 +454,6 @@ applySize(width, height);
 			return;
 		}
 
-		// --- Éditer un texte existant ---
-		const active = canvas.getActiveObject();
-		if (active && (active.type === 'i-text' || active.type === 'textbox')) {
-			isEditingText = true;
-			active.enterEditing();
-			active.selectAll();
-			return;
-		}
-
 		startPoint = p;
 
 		// --- Outil texte ---
@@ -489,7 +511,6 @@ applySize(width, height);
 		if (tempObj) canvas.add(tempObj);
 	});
 
-	// --- MOUSE MOVE ---
 	canvas.on('mouse:move', function(opt) {
 		const evt = opt.e;
 		const p = canvas.getPointer(evt);
@@ -502,10 +523,13 @@ applySize(width, height);
 			this.requestRenderAll();
 			lastPosX = evt.clientX;
 			lastPosY = evt.clientY;
-			return;
+			return; // <- ici ok
 		}
 
-		if (!isDrawingShape || !startPoint) return;
+		// --- Si on ne dessine pas, on ne bloque pas les autres objets (comme le texte) ---
+		if (!isDrawingShape || !startPoint) {
+			return; // Fabric gère le déplacement du texte tout seul
+		}
 
 		// --- Aperçu des formes ---
 		if (tempObj && ['rect','ellipse','line'].includes(currentTool)) {
@@ -521,7 +545,11 @@ applySize(width, height);
 			} else if (currentTool === 'ellipse') {
 				const rx = Math.abs(p.x - startPoint.x)/2;
 				const ry = Math.abs(p.y - startPoint.y)/2;
-				tempObj.set({ rx, ry, left: Math.min(p.x, startPoint.x), top: Math.min(p.y, startPoint.y) });
+				tempObj.set({ 
+					rx, ry, 
+					left: Math.min(p.x, startPoint.x), 
+					top: Math.min(p.y, startPoint.y) 
+				});
 			} else if (currentTool === 'line') {
 				tempObj.set({ x2: p.x, y2: p.y });
 			}
@@ -553,7 +581,7 @@ applySize(width, height);
 
 		// --- Aperçu flèche ---
 		if (currentTool === 'arrow' && isDrawingArrow) {
-			canvas.requestRenderAll(); // optionnel: juste rafraîchir le canevas
+			canvas.requestRenderAll();
 		}
 	});
 
@@ -643,6 +671,23 @@ applySize(width, height);
 	  startPoint = null;
 	  isDrawingShape = false;
 	  currentTool = 'select';
+	  saveJsonRealtime();
+	  jsonReset = false;
+	});
+
+	// Version throttlée pour le déplacement
+	let lastMoveTime = 0;
+	function saveJsonRealtimeThrottled() {
+	  const now = Date.now();
+	  if (now - lastMoveTime > 500) { // toutes les 500ms max
+		saveJsonRealtime();
+		lastMoveTime = now;
+	  }
+	}
+
+	// Sauvegarde au mouvement en temps réel (avec throttle)
+	canvas.on('object:moving', () => {
+	  saveJsonRealtimeThrottled();
 	});
 
   // --- Tools State ---
@@ -987,6 +1032,11 @@ applySize(width, height);
 				canvas.requestRenderAll();
 				break;
 		}
+		 // --- Déplacement clavier terminé : marquer comme modifié et sauvegarder ---
+		active.set({ dirty: true }); // facultatif, juste pour signaler changement
+		canvas.fire('object:modified', { target: active }); // déclenche l'événement Fabric.js
+		saveJsonRealtime(); // sauvegarde immédiate
+		jsonReset = false;
 	});
 
 	function saveToServer(type, data) {
@@ -1233,7 +1283,59 @@ applySize(width, height);
 		if (obj.type === 'i-text' || obj.type === 'textbox') {
 			obj.set({ fontFamily: fontFamily.value });
 			canvas.requestRenderAll();
+			saveJsonRealtime();
+			jsonReset = false;
 		}
+	});
+
+	// --- Appliquer la taille à un texte sélectionné ---
+	fontSize.addEventListener('change', () => {
+	  const obj = canvas.getActiveObject();
+	  if (!obj) return;
+	  if (obj.type === 'i-text' || obj.type === 'textbox') {
+		obj.set({ fontSize: parseInt(fontSize.value, 10) });
+		canvas.requestRenderAll();
+		saveJsonRealtime();
+		jsonReset = false;
+	  }
+	});
+
+	// --- Basculer le gras ---
+	document.getElementById('boldBtn').addEventListener('click', () => {
+	  const obj = canvas.getActiveObject();
+	  if (!obj) return;
+	  if (obj.type === 'i-text' || obj.type === 'textbox') {
+		const newWeight = (obj.fontWeight === 'bold') ? 'normal' : 'bold';
+		obj.set({ fontWeight: newWeight });
+		canvas.requestRenderAll();
+		saveJsonRealtime();
+		jsonReset = false;
+	  }
+	});
+
+	// --- Basculer l’italique ---
+	document.getElementById('italicBtn').addEventListener('click', () => {
+	  const obj = canvas.getActiveObject();
+	  if (!obj) return;
+	  if (obj.type === 'i-text' || obj.type === 'textbox') {
+		const newStyle = (obj.fontStyle === 'italic') ? 'normal' : 'italic';
+		obj.set({ fontStyle: newStyle });
+		canvas.requestRenderAll();
+		saveJsonRealtime();
+		jsonReset = false;
+	  }
+	});
+
+	// --- Réinitialiser (retirer gras + italique) ---
+	document.getElementById('normalBtn').addEventListener('click', () => {
+	  const obj = canvas.getActiveObject();
+	  if (!obj) return;
+	  if (obj.type === 'i-text' || obj.type === 'textbox') {
+		obj.set({ fontWeight: 'normal', fontStyle: 'normal' });
+		canvas.requestRenderAll();
+		saveJsonRealtime();
+		jsonReset = false;
+	  }
 	});
 
 	// --- Inclure la police dans applyStyleToActive ---
@@ -1266,37 +1368,60 @@ applySize(width, height);
 		});
 	});
 
-let saveTimeout;
-const SAVE_INTERVAL = 2000; // ms
+	let saveTimeout;
+	const SAVE_INTERVAL = 1000; // ms
+	let currentController = null;
 
-function saveJsonRealtime() {
-  // Sauvegarde seulement si admin
-  if (currentRole !== 'admin') return;
+	function saveJsonRealtime() {
+	  // Sauvegarde seulement si admin
+	  if (currentRole !== 'admin') return;
 
-  if (saveTimeout) clearTimeout(saveTimeout);
+	  // Débounce
+	  if (saveTimeout) clearTimeout(saveTimeout);
 
-  saveTimeout = setTimeout(() => {
-    const json = canvas.toDatalessJSON();
-    const jsonStr = JSON.stringify(json);
+	  saveTimeout = setTimeout(() => {
+		const json = canvas.toDatalessJSON();
+		const jsonStr = JSON.stringify(json);
 
-    const formData = new FormData();
-    formData.append('data', jsonStr);
+		// Annuler la requête précédente si elle n'est pas terminée
+		if (currentController) {
+		  currentController.abort();
+		}
+		currentController = new AbortController();
+		const { signal } = currentController;
 
-    fetch("save_json.php", {
-      method: "POST",
-      body: formData
-    })
-    .catch(err => console.error("Erreur sauvegarde JSON:", err));
-  }, SAVE_INTERVAL);
-}
+		const formData = new FormData();
+		formData.append('data', jsonStr);
 
-// Événements pour déclencher la sauvegarde et remettre jsonReset à false
-['object:added','object:modified','object:removed'].forEach(evt => {
-  canvas.on(evt, function(e) {
-    saveJsonRealtime();
-    jsonReset = false;
-  });
-});
+		fetch("save_json.php", {
+		  method: "POST",
+		  body: formData,
+		  signal
+		})
+		.then(response => {
+		  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+		  return response.text();
+		})
+		.then(data => {
+		  console.log("JSON sauvegardé", data);
+		})
+		.catch(err => {
+		  if (err.name === 'AbortError') {
+			console.log("Requête précédente annulée");
+		  } else {
+			console.error("Erreur sauvegarde JSON:", err);
+		  }
+		});
+	  }, SAVE_INTERVAL);
+	}
+
+	// Événements pour déclencher la sauvegarde et remettre jsonReset à false
+	['object:added', 'object:removed', 'object:scaling', 'object:rotating'].forEach(evt => {
+	  canvas.on(evt, () => {
+		saveJsonRealtime();
+		jsonReset = false;
+	  });
+	});
 
 	// Avant de quitter la page
 	window.addEventListener('beforeunload', (e) => {
