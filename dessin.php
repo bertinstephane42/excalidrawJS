@@ -1298,14 +1298,6 @@ function saveJsonRealtime() {
   });
 });
 
-	// On garde les événements mais avec throttling
-	['object:added','object:modified','object:removed'].forEach(evt => {
-  canvas.on(evt, function(e) {
-    saveJsonRealtime(e);  // Appel de ta fonction de sauvegarde
-    jsonReset = false;     // Remise à false à chaque modification
-  });
-});
-
 	// Avant de quitter la page
 	window.addEventListener('beforeunload', (e) => {
 		if (!jsonReset) {
