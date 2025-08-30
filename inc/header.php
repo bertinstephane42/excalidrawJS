@@ -20,6 +20,7 @@ if (!isLoggedIn()) {
             <nav class="navbar">
                 <a class="nav-btn" href="dashboard.php">Accueil</a>
                 <a class="nav-btn" href="dessin.php">Éditeur</a>
+				<a class="nav-btn" href="voir.php">Session live</a>
                 <a class="nav-btn" href="fichiers.php">Fichiers</a>
                 <a class="nav-btn logout" href="logout.php">Déconnexion</a>
             </nav>
