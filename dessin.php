@@ -321,40 +321,52 @@ include __DIR__ . '/inc/header.php';
     <span id="closeHelp" class="close">&times;</span>
     <h2>Guide des outils</h2>
     <ul>
-      <li><b>🖱️ Sélection :</b> déplacer, redimensionner et supprimer les objets.</li>
+      <li><b>🖱️ Sélection :</b> déplacer, redimensionner, verrouiller/déverrouiller et supprimer les objets.</li>
       <li><b>⬛ Rectangle :</b> dessiner un rectangle sur la grille.</li>
       <li><b>⚪ Ellipse :</b> dessiner une ellipse.</li>
       <li><b>🔷 Losange :</b> dessiner un losange (forme en diamant).</li>
-      <li><b>🔤 Texte :</b> insérer du texte éditable.</li>
-      <li><b>✏️ Crayon :</b> dessiner à main levée.</li>
+      <li><b>🔤 Texte :</b> insérer du texte éditable, changer police, taille, gras, italique.</li>
+      <li><b>✏️ Crayon :</b> dessin libre (Pinceau).</li>
       <li><b>➔ Flèche :</b> dessiner une flèche droite, courbée ou en angle.</li>
-      <li><b>📋 Dupliquer :</b> copier un objet sélectionné.</li>
+      <li><b>📋 Dupliquer :</b> copier un objet sélectionné ou un groupe.</li>
       <li><b>⏫ Amener au premier plan :</b> placer l’objet sélectionné au-dessus des autres.</li>
       <li><b>⏬ Renvoyer à l’arrière :</b> placer l’objet sélectionné derrière les autres.</li>
       <li><b>↺ / ↻ Undo / Redo :</b> annuler ou rétablir une action.</li>
-      <li><b>⬆ Export :</b> sauvegarder en PNG / JSON.</li>
+      <li><b>⬆ Export :</b> sauvegarder en PNG / SVG / JSON (local et serveur si admin).</li>
       <li><b>⬇ Import :</b> recharger un dessin JSON sauvegardé.</li>
+      <li><b>Réinitialiser :</b> effacer tout le canvas et rétablir la grille.</li>
     </ul>
 
     <h3>⚡ Raccourcis & touches spéciales</h3>
     <ul>
-      <li><b>SHIFT + Molette de souris :</b> zoom avant/arrière.</li>
-      <li><b>SHIFT + redimensionnement :</b> conserver les proportions d’un objet.</li>
-      <li><b>CTRL + C / CTRL + V :</b> copier-coller un objet sélectionné.</li>
+      <li><b>ALT + clic + molette :</b> panning (déplacement du canvas).</li>
+      <li><b>SHIFT + molette :</b> zoom avant/arrière.</li>
+      <li><b>CTRL/CMD + Z :</b> Undo.</li>
+      <li><b>CTRL/CMD + Y ou CTRL + SHIFT + Z :</b> Redo.</li>
+      <li><b>CTRL/CMD + D :</b> Dupliquer l’objet sélectionné.</li>
       <li><b>DEL / SUPPR :</b> supprimer l’objet sélectionné.</li>
-      <li><b>CTRL + Z :</b> annuler la dernière action.</li>
-      <li><b>CTRL + Y :</b> rétablir une action annulée.</li>
-      <li><b>Flèches clavier :</b> déplacer finement l’objet sélectionné (par pas de 1px).</li>
-      <li><b>SHIFT + Flèches :</b> déplacement rapide (par pas de 10px).</li>
-	  <li><b>Export :</b> sauvegarder en PNG / SVG / JSON.</li>
-	  <li><b>ALT + lettre :</b> changer rapidement d’outil (ALT+R Rectangle, ALT+C Cercle, ALT+L Ligne, ALT+T Texte, ALT+S Sélection, ALT+P Pinceau).</li>
+      <li><b>Flèches clavier :</b> déplacer finement l’objet sélectionné (1px).</li>
+      <li><b>SHIFT + Flèches :</b> déplacement rapide (10px).</li>
+      <li>
+		  <b>ALT + lettre :</b> changer d’outil rapidement :
+		  <ul style="list-style-type: disc; margin-left: 20px;">
+			<li><b>ALT+V</b> : Sélection</li>
+			<li><b>ALT+R</b> : Rectangle</li>
+			<li><b>ALT+O</b> : Ellipse</li>
+			<li><b>ALT+L</b> : Ligne</li>
+			<li><b>ALT+A</b> : Flèche</li>
+			<li><b>ALT+P</b> : Pinceau</li>
+			<li><b>ALT+T</b> : Texte</li>
+		  </ul>
+		</li>
+      <li><b>SHIFT + redimensionnement :</b> conserver les proportions d’un objet.</li>
     </ul>
 
     <p style="margin-top:10px; font-size:0.9em; color:#666;">
-      Astuce : combine les outils et raccourcis pour gagner du temps (ex. ALT pour te déplacer pendant que tu ajoutes plusieurs formes).
+      Astuce : combine les outils et raccourcis pour gagner du temps. Ex. : ALT pour te déplacer pendant que tu ajoutes plusieurs formes.
     </p>
-	
-	<p style="margin-top:10px; font-size:0.9em; color:#d33; font-weight:bold;">
+    
+    <p style="margin-top:10px; font-size:0.9em; color:#d33; font-weight:bold;">
       ⚠️ Important : avant de quitter la page, cliquez sur le bouton "Réinitialiser" pour vider le dessin en cours. Si vous quittez sans réinitialiser, un message vous avertira que vos données pourraient ne pas être sauvegardées correctement.
     </p>
   </div>
