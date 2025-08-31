@@ -14,6 +14,7 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 * Tableau de bord des dessins
 * Suppression et modification de dessins existants
 * Protection des répertoires sensibles via `.htaccess`
+* Visualisation en live des dessins générés par un admin
 
 ---
 
