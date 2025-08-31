@@ -1,9 +1,9 @@
 <?php
 // Liste des utilisateurs (login => hash)
 $users = [
-	'admin' => '$2y$12$CS4ULBTrIUqtP4NXqfeYQeHMmjomwZMmqbarA062NJe4eZXBji/Y.', // Remplacer
-	'etudiant' => '$2y$12$uycR1y7M4JyYMsnzEOi2CuTPBCdnVkiFiFxQXe7nUqI/qD28RXZ.C', // Remplacer
+	'admin' => '$2y$10$dYnbLLWp77rRaiOm/JszGO2ARh2p9oWsb/R4EnoqRdQ9vpX7TSzJ6', // Remplacer (admin par défaut)
+	'etudiant' => '$2y$10$40yyj6f5YrFj.j0WWo122Oh2x.7Dcf0Xjx4fc/qH4vIIMR9iATo0W', // Remplacer (etudiant par défaut)
 ];
 	
-//echo password_hash('LessonDraw', PASSWORD_DEFAULT);
+//echo password_hash('Password', PASSWORD_DEFAULT);
 ?>
