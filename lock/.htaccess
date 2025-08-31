@@ -1,0 +1,4 @@
+Options -Indexes
+<FilesMatch "\.lock$">
+    Require all granted
+</FilesMatch>
