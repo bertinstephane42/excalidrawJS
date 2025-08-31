@@ -1,6 +1,58 @@
 <?php
 require_once __DIR__ . '/inc/auth.php';
 if (!isLoggedIn()) { header('Location: login.php'); exit; }
+
+session_start();
+
+// --- Paramètres du verrou ---
+$lockDir  = __DIR__ . '/lock';
+$lockFile = $lockDir . '/dessin.lock';
+$ttl      = 120; // secondes : au-delà, on considère le lock “périmé”
+
+// --- Création du verrou uniquement si ADMIN ---
+if (($_SESSION['role'] ?? '') === 'admin') {
+
+    // 1) S'assurer que le dossier existe et est inscriptible
+    if (!is_dir($lockDir)) {
+        if (!mkdir($lockDir, 0775, true) && !is_dir($lockDir)) {
+            http_response_code(500);
+            die('Impossible de créer le dossier de verrouillage : ' . htmlspecialchars($lockDir));
+        }
+    }
+    if (!is_writable($lockDir)) {
+        http_response_code(500);
+        die('Le dossier de verrouillage n\'est pas accessible en écriture : ' . htmlspecialchars($lockDir));
+    }
+
+    // 2) Si un lock récent existe, on refuse
+    if (is_file($lockFile) && (time() - filemtime($lockFile)) < $ttl) {
+        header('Location: page_ouverte.php'); // Une session admin est déjà active
+        exit;
+    }
+
+    // 3) Acquisition atomique du lock
+    $fp = @fopen($lockFile, 'x'); // 'x' = crée le fichier de façon exclusive
+    if ($fp === false) {
+        // Cas de course : un autre admin a (peut-être) créé le lock juste avant.
+        if (is_file($lockFile) && (time() - filemtime($lockFile)) < $ttl) {
+            header('Location: page_ouverte.php');
+            exit;
+        }
+        // Lock présent mais périmé → on le remplace
+        @unlink($lockFile);
+        $fp = @fopen($lockFile, 'x');
+        if ($fp === false) {
+            header('Location: page_ouverte.php');
+            exit;
+        }
+    }
+    fwrite($fp, session_id());
+    fclose($fp);
+
+    // IMPORTANT : ne pas supprimer le lock à la fin de la requête
+}
+
+// À partir d’ici → contenu de la page accessible à tous (étudiant ou admin)
 include __DIR__ . '/inc/header.php';
 ?>
 
@@ -313,6 +365,40 @@ include __DIR__ . '/inc/header.php';
 <script src="https://cdn.jsdelivr.net/npm/fabric@5.2.4/dist/fabric.min.js"></script>
 <script>
    const currentRole = <?php echo json_encode($_SESSION['role'] ?? 'etudiant'); ?>;
+
+// Empêcher l'ouverture multiple de la page dessin.php
+(function preventMultipleTabs() {
+	const LOCK_KEY = 'dessin_tab_lock';
+	const currentTimestamp = Date.now().toString();
+
+	// Vérifie s'il y a déjà un verrou actif
+	const existingLock = localStorage.getItem(LOCK_KEY);
+	if (existingLock) {
+		alert("Cette page est déjà ouverte dans un autre onglet. Veuillez fermer l'autre onglet d'abord.");
+		window.location.href = "about:blank"; // ou redirige ailleurs
+		return;
+	}
+
+	// Définir le verrou
+	localStorage.setItem(LOCK_KEY, currentTimestamp);
+
+	// Nettoyer le verrou si l'onglet se ferme ou se rafraîchit
+	window.addEventListener('beforeunload', () => {
+		const lock = localStorage.getItem(LOCK_KEY);
+		if (lock === currentTimestamp) {
+			localStorage.removeItem(LOCK_KEY);
+		}
+	});
+
+	// Écoute les changements de verrou dans les autres onglets
+	window.addEventListener('storage', (event) => {
+		if (event.key === LOCK_KEY && event.newValue !== currentTimestamp) {
+			alert("Un autre onglet vient d'ouvrir cette page. Cet onglet va être désactivé.");
+			window.location.href = "about:blank";
+		}
+	});
+})();
+
 (function(){
   const canvasEl = document.getElementById('c');
   const canvas = new fabric.Canvas('c', {
@@ -328,7 +414,7 @@ include __DIR__ . '/inc/header.php';
   let gridLines = [];
     // -- Redimensionnement fiable de .canvas-wrap
   const wrap = canvasEl.parentElement; // .canvas-wrap
-
+  
 	function calculateOptimalSize() {
 	  const containerRect = wrap.getBoundingClientRect();
 	  const width = Math.max(CANVAS_MIN_WIDTH, containerRect.width);
@@ -1447,6 +1533,19 @@ applySize(width, height);
 	window.addEventListener("click", (e) => {
 	  if (e.target === helpModal) helpModal.style.display = "none";
 	});
+	
+	<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+	  // Heartbeat pour garder le lock “vivant”
+	  setInterval(() => {
+		fetch('heartbeat_lock.php', { method: 'POST', keepalive: true });
+	  }, 30000); // toutes les 30s
+	  
+	  // Libère le lock quand l’admin ferme/rafraîchit l’onglet
+	  window.addEventListener('beforeunload', () => {
+		// sendBeacon fonctionne même quand la page se ferme
+		navigator.sendBeacon('release_lock.php');
+	  });
+	<?php endif; ?>
 })();
 </script>
 

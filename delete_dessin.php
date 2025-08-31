@@ -28,10 +28,10 @@ if (isset($_GET['file'])) {
     // Suppression
     if (is_file($path)) {
         unlink($path);
-        header("Location: dashboard.php?deleted=" . urlencode($file));
+        header("Location: fichiers.php");
         exit;
     }
 }
 
-header('Location: dashboard.php');
+header('Location: fichiers.php');
 exit;
