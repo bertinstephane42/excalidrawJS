@@ -6,7 +6,7 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 
 ## 🚀 Fonctionnalités
 
-### ⚙️ Générale
+### ⚙️ Générale (`dashboard.php`)
 - 🔐 Authentification utilisateur (connexion / déconnexion)  
 - 🛡️ Protection des répertoires sensibles via `.htaccess` (`inc/`)  
 - 📊 Tableau de bord  
