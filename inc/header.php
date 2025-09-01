@@ -22,6 +22,9 @@ if (!isLoggedIn()) {
                 <a class="nav-btn" href="dessin.php">Éditeur</a>
 				<a class="nav-btn" href="voir.php">Session live</a>
                 <a class="nav-btn" href="fichiers.php">Fichiers</a>
+				<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+					<a class="nav-btn" href="manage_lock.php">Gérer les verrous</a>
+				<?php endif; ?>
                 <a class="nav-btn logout" href="logout.php">Déconnexion</a>
             </nav>
         </div>
