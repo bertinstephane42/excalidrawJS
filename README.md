@@ -6,10 +6,13 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 
 ## 🚀 Fonctionnalités
 
-### ⚙️ Générale (`dashboard.php`)
-- 🔐 Authentification utilisateur (connexion / déconnexion)  
+### ⚙️ Générale
+- 🔐 Authentification utilisateur (connexion / déconnexion)  (`login.php`, `logout.php`)
 - 🛡️ Protection des répertoires sensibles via `.htaccess` (`inc/`)  
-- 📊 Tableau de bord  
+
+### ⚙️ Tableau de bord (`dashboard.php`)  
+- 📊 Affichage des différents outils
+- 🔧 Affichage de l'outil "Gérer les verrous" (mode admin)
 
 ### 🎨 Outil de dessin (`dessin.php`)
 - 🔒 Verrouillage de l’outil de dessin pour éviter les conflits (système de lock)  
