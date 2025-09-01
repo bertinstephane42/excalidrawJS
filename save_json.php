@@ -37,4 +37,5 @@ if (file_put_contents($file, $data) === false) {
     exit;
 }
 
-echo "JSON sauvegardé dans $file";
+
+echo "JSON sauvegardé";
