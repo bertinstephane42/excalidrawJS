@@ -294,18 +294,37 @@ include __DIR__ . '/inc/header.php';
       <button class="tool" id="undo" title="Annuler (Ctrl+Z)">↶</button>
       <button class="tool" id="redo" title="Rétablir (Ctrl+Y / Ctrl+Shift+Z)">↷</button>
     </div>
-	
-	<button id="helpBtn" title="Aide">❓ Aide</button>
 
     <!-- Export -->
  	<div class="group" aria-label="Export">
-	  <button class="tool" id="exportPNG">Exporter PNG</button>
-	  <button class="tool" id="exportSVG">Exporter SVG</button>
-	  <button class="tool" id="exportJSON">Exporter JSON</button> <!-- Nouveau -->
 	  <input type="text" id="filenameInput" placeholder="Nom du dessin" />
+	  <div id="groupSelection">
+		  <label>
+			<input type="radio" name="group" value="bts1" checked> BTS1
+		  </label>
+		  <label>
+			<input type="radio" name="group" value="bts2"> BTS2
+		  </label>
+		  <label>
+			<input type="radio" name="group" value="lic3"> LIC3
+		  </label>
+		</div>
+		<button class="tool" id="exportPNG">Exporter PNG</button>
+		<button class="tool" id="exportSVG">Exporter SVG</button>
+		<button class="tool" id="exportJSON">Exporter JSON</button> <!-- Nouveau -->
+	</div>
+	<div class="group" aria-label="Import">
 	  <input type="file" id="importJSON" accept=".json" style="display:none;">
 		<button id="btnImportJSON">Importer JSON</button>
+	</div>
+	<div class="group" aria-label="Reinit">
 		<button class="tool" id="resetCanvas">Réinitialiser</button>
+	</div>	
+	<div class="group" aria-label="Reinit">
+		<button class="tool" id="quit">Quitter</button>
+	</div>
+    <div class="group" aria-label="Help">	
+		<button id="helpBtn" title="Aide">❓ Aide</button>
 	</div>
   </div>
 
@@ -366,9 +385,10 @@ include __DIR__ . '/inc/header.php';
       Astuce : combine les outils et raccourcis pour gagner du temps. Ex. : ALT pour te déplacer pendant que tu ajoutes plusieurs formes.
     </p>
     
-    <p style="margin-top:10px; font-size:0.9em; color:#d33; font-weight:bold;">
-      ⚠️ Important : avant de quitter la page, cliquez sur le bouton "Réinitialiser" pour vider le dessin en cours. Si vous quittez sans réinitialiser, un message vous avertira que vos données pourraient ne pas être sauvegardées correctement.
-    </p>
+	<p style="margin-top:10px; font-size:0.9em; color:#d33; font-weight:bold;">
+	  ⚠️ Important : pour éviter tout problème (canevas non vidé, session encore active, verrouillage non libéré), il est impératif de cliquer sur le bouton <b>"Quitter"</b> lorsque vous avez terminé. 
+	  Le bouton <b>"Quitter"</b> réinitialisera automatiquement le canevas et vous redirigera vers le dashboard. Ne quittez pas la page autrement.
+	</p>
   </div>
 </div>
 </div>
@@ -378,38 +398,64 @@ include __DIR__ . '/inc/header.php';
 <script>
    const currentRole = <?php echo json_encode($_SESSION['role'] ?? 'etudiant'); ?>;
 
-// Empêcher l'ouverture multiple de la page dessin.php
-(function preventMultipleTabs() {
-	const LOCK_KEY = 'dessin_tab_lock';
-	const currentTimestamp = Date.now().toString();
+	// Empêcher l'ouverture multiple de la page dessin.php
+	(function preventMultipleTabs() {
+		const LOCK_KEY = 'dessin_tab_lock';
+		const currentTimestamp = Date.now().toString();
 
-	// Vérifie s'il y a déjà un verrou actif
-	const existingLock = localStorage.getItem(LOCK_KEY);
-	if (existingLock) {
-		alert("Cette page est déjà ouverte dans un autre onglet. Veuillez fermer l'autre onglet d'abord.");
-		window.location.href = "about:blank"; // ou redirige ailleurs
-		return;
-	}
-
-	// Définir le verrou
-	localStorage.setItem(LOCK_KEY, currentTimestamp);
-
-	// Nettoyer le verrou si l'onglet se ferme ou se rafraîchit
-	window.addEventListener('beforeunload', () => {
-		const lock = localStorage.getItem(LOCK_KEY);
-		if (lock === currentTimestamp) {
-			localStorage.removeItem(LOCK_KEY);
-		}
-	});
-
-	// Écoute les changements de verrou dans les autres onglets
-	window.addEventListener('storage', (event) => {
-		if (event.key === LOCK_KEY && event.newValue !== currentTimestamp) {
-			alert("Un autre onglet vient d'ouvrir cette page. Cet onglet va être désactivé.");
+		// Vérifie s'il y a déjà un verrou actif
+		const existingLock = localStorage.getItem(LOCK_KEY);
+		if (existingLock) {
+			alert("Cette page est déjà ouverte dans un autre onglet. Veuillez fermer l'autre onglet d'abord.");
 			window.location.href = "about:blank";
+			return;
 		}
-	});
-})();
+
+		// Définir le verrou
+		localStorage.setItem(LOCK_KEY, currentTimestamp);
+
+		// Fonction pour libérer le lock
+		const releaseLock = () => {
+			const lock = localStorage.getItem(LOCK_KEY);
+			if (lock === currentTimestamp) {
+				localStorage.removeItem(LOCK_KEY);
+			}
+
+			<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+			navigator.sendBeacon('release_lock.php');
+			<?php endif; ?>
+			if (typeof heartbeatInterval !== 'undefined') clearInterval(heartbeatInterval);
+		};
+
+		// Nettoyer le verrou si l'onglet se ferme ou se rafraîchit
+		window.addEventListener('beforeunload', releaseLock);
+		window.addEventListener('unload', releaseLock); // fallback pour certains navigateurs
+
+		// Écoute les changements de verrou dans les autres onglets
+		window.addEventListener('storage', (event) => {
+			if (event.key === LOCK_KEY && event.newValue !== currentTimestamp) {
+				alert("Un autre onglet vient d'ouvrir cette page. Cet onglet va être désactivé.");
+				window.location.href = "about:blank";
+			}
+		});
+
+		<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+		// Heartbeat pour garder le lock “vivant”
+		const heartbeat = () => {
+			fetch('heartbeat_lock.php', { method: 'POST', keepalive: true });
+		};
+		heartbeat(); // lancement immédiat
+		const heartbeatInterval = setInterval(heartbeat, 30000); // toutes les 30s
+		<?php else: ?>
+		// Utilisateur non-admin : avertissement simple avant de quitter
+		window.addEventListener('beforeunload', (e) => {
+			if (!jsonReset) {
+				e.preventDefault();
+				e.returnValue = '';
+			}
+		});
+		<?php endif; ?>
+	})();
 
 (function(){
   const canvasEl = document.getElementById('c');
@@ -1145,7 +1191,9 @@ applySize(width, height);
 		const formData = new FormData();
 
 		// Récupération du nom choisi par l'étudiant
-		let filename = document.getElementById("filenameInput").value || "dessin";
+		const selectedGroup = document.querySelector('input[name="group"]:checked').value;
+	    const customName = document.getElementById('filenameInput').value.trim() || 'dessin';
+		let filename = `${selectedGroup}_${customName}`;
 
 		formData.append("type", type);
 		formData.append("data", data);
@@ -1162,9 +1210,11 @@ applySize(width, height);
 
 	// Fonction utilitaire pour générer le nom de fichier
 	function generateFilename(extension) {
-	  const prefix = document.getElementById('filenameInput').value.trim() || 'dessin';
+	  const selectedGroup = document.querySelector('input[name="group"]:checked').value;
+	  const customName = document.getElementById('filenameInput').value.trim() || 'dessin';
 	  const datePart = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
-	  return `${prefix}-${datePart}.${extension}`;
+	  // Format final : groupe_nom-date.extension
+	  return `${selectedGroup}_${customName}-${datePart}.${extension}`;
 	}
 
 	// Fonction générique de téléchargement
@@ -1346,33 +1396,37 @@ applySize(width, height);
 	});
 
 	// Bouton Réinitialiser
-	document.getElementById('resetCanvas').addEventListener('click', () => {
-	  if (!confirm("Voulez-vous vraiment réinitialiser la grille et effacer tout le dessin ?")) return;
+	function resetCanvas(skipConfirm = false) {
+		if (!skipConfirm && !confirm("Voulez-vous vraiment réinitialiser la grille et effacer tout le dessin ?")) return;
 
-	  // 1) Supprimer proprement sans rater d’objets
-	  canvas.getObjects().slice().forEach(obj => {
-		if (!obj.excludeFromExport) canvas.remove(obj);
-	  });
+		// 1) Supprimer les objets
+		canvas.getObjects().slice().forEach(obj => {
+			if (!obj.excludeFromExport) canvas.remove(obj);
+		});
 
-	  // 2) État visuel neutre
-	  canvas.setBackgroundColor('#ffffff', canvas.renderAll.bind(canvas));
-	  canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+		// 2) Réinitialiser le canvas
+		canvas.setBackgroundColor('#ffffff', canvas.renderAll.bind(canvas));
+		canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
 
-	  // 3) Recalcule taille + grille via tes helpers
-	  const { width, height } = calculateOptimalSize();
-	  applySize(width, height); // (appel déjà drawGrid() + renderAll() dans ton code)
+		// 3) Taille et grille
+		const { width, height } = calculateOptimalSize();
+		applySize(width, height);
 
-	  // 4) Réinitialiser l’historique (évite des “undo” vers des objets fantômes)
-	  undoStack.length = 0;
-	  redoStack.length = 0;
-	  isRestoring = false;
-	  saveState();
-	    // 5) Important : permettre de ré-importer le même fichier ensuite
-	  const fileInput = document.getElementById('importJSON');
-	  if (fileInput) fileInput.value = '';
-	  //
-	  	jsonReset = true;
-	});
+		// 4) Historique
+		undoStack.length = 0;
+		redoStack.length = 0;
+		isRestoring = false;
+		saveState();
+
+		// 5) Reset input import
+		const fileInput = document.getElementById('importJSON');
+		if (fileInput) fileInput.value = '';
+
+		jsonReset = true;
+	}
+
+	// Écouteur pour le clic manuel
+	document.getElementById('resetCanvas').addEventListener('click', () => resetCanvas(false));
 	
 	// --- Appliquer la police à un texte sélectionné ---
 	fontFamily.addEventListener('change', () => {
@@ -1455,7 +1509,7 @@ applySize(width, height);
 	document.querySelectorAll('.navbar .nav-btn').forEach(link => {
 		link.addEventListener('click', function(e) {
 			// On définit les liens qui nécessitent une confirmation
-			const sensitive = ['dashboard.php', 'dessin.php', 'fichiers.php', 'logout.php']; // exemple : quitter ou supprimer
+			const sensitive = ['dashboard.php', 'dessin.php', 'fichiers.php', 'logout.php', 'manage_lock.php', 'voir.php']; // exemple : quitter ou supprimer
 
 			if (sensitive.some(s => link.href.includes(s))) {
 				const msg = `Voulez-vous vraiment quitter cette page et perdre vos modifications non sauvegardées ?`;
@@ -1520,15 +1574,46 @@ applySize(width, height);
 		jsonReset = false;
 	  });
 	});
+	
+	document.addEventListener('DOMContentLoaded', () => {
+		const radios = document.querySelectorAll('#groupSelection input[name="group"]');
+		let currentValue = document.querySelector('#groupSelection input[name="group"]:checked').value;
 
-	// Avant de quitter la page
-	window.addEventListener('beforeunload', (e) => {
-		if (!jsonReset) {
-			// Message personnalisé souvent ignoré par les navigateurs modernes
-			e.preventDefault();
-			e.returnValue = '';
-			return '';
-		}
+		radios.forEach(radio => {
+			radio.addEventListener('change', (e) => {
+				const newValue = e.target.value;
+				
+				// Demande confirmation
+				const proceed = confirm(`Vous allez changer de section vers ${newValue.toUpperCase()}. Voulez-vous continuer ?`);
+				
+				if (proceed) {
+					currentValue = newValue; // Mise à jour de la sélection actuelle
+				} else {
+					// Annule le changement et restaure l'ancienne sélection
+					e.target.checked = false;
+					document.querySelector(`#groupSelection input[name="group"][value="${currentValue}"]`).checked = true;
+				}
+			});
+		});
+		// Bouton Quitter
+		document.getElementById('quit').addEventListener('click', () => {
+			const confirmQuit = confirm("Voulez-vous vraiment quitter l'outil ?");
+			if (!confirmQuit) return;
+
+			// Reset sans confirmation
+			resetCanvas(true);
+
+			// Libération lock / redirection
+			<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+			if (localStorage.getItem('dessin_tab_lock')) {
+				localStorage.removeItem('dessin_tab_lock');
+			}
+			navigator.sendBeacon('release_lock.php');
+			<?php endif; ?>
+
+			// Redirection
+			window.location.href = 'dashboard.php';
+		});
 	});
 	
 	// Modale d'aide
@@ -1545,19 +1630,6 @@ applySize(width, height);
 	window.addEventListener("click", (e) => {
 	  if (e.target === helpModal) helpModal.style.display = "none";
 	});
-	
-	<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-	  // Heartbeat pour garder le lock “vivant”
-	  setInterval(() => {
-		fetch('heartbeat_lock.php', { method: 'POST', keepalive: true });
-	  }, 30000); // toutes les 30s
-	  
-	  // Libère le lock quand l’admin ferme/rafraîchit l’onglet
-	  window.addEventListener('beforeunload', () => {
-		// sendBeacon fonctionne même quand la page se ferme
-		navigator.sendBeacon('release_lock.php');
-	  });
-	<?php endif; ?>
 })();
 </script>
 

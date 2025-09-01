@@ -12,17 +12,6 @@ include __DIR__ . '/inc/header.php';
     <title>Page déjà ouverte</title>
 </head>
 <body>
-    <!-- Header -->
-    <header class="site-header">
-        <div class="header-container">
-            <div class="logo">
-                <span>Admin Panel</span>
-            </div>
-            <nav class="navbar">
-                <a href="dashboard.php" class="nav-btn">Retour à l'accueil</a>
-            </nav>
-        </div>
-    </header>
 
     <!-- Main Content -->
     <div class="main-app">
@@ -35,9 +24,17 @@ include __DIR__ . '/inc/header.php';
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="site-footer">
-        <p>&copy; 2025 ExcalidrawJS.</p>
-    </footer>
+ <!-- Footer -->
+<footer class="site-footer" style="
+    background-color: #f5f5f5;
+    padding: 1.5rem 2rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: #555;
+    border-top: 1px solid #ddd;
+    margin-top: 2rem;
+">
+    <p>&copy; 2025 ExcalidrawJS.</p>
+</footer>
 </body>
 </html>
