@@ -6,15 +6,22 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 
 ## 🚀 Fonctionnalités
 
+Générale :
 * Authentification utilisateur (connexion / déconnexion)
+* Protection des répertoires sensibles via `.htaccess` (`inc/`)
+* Tableau de bord
+Outil de dessin (dessin.php) :
+* Verrouillage de l'outil de dessin pour éviter les conflits (système de lock)
 * Création de dessins via une interface interactive
-* Sauvegarde des dessins au format JSON
-* Gestion des fichiers enregistrés (`dessins/`, `json/`)
-* Verrouillage des ressources pour éviter les conflits (système de lock)
-* Tableau de bord des dessins
-* Suppression et modification de dessins existants
-* Protection des répertoires sensibles via `.htaccess`
+* Sauvegarde des dessins au format PNG, SVG et JSON
+* Import et modification de dessins existants (fichiers JSON)
+Visualisation des dessins (fichiers.php) :
+* Visualisation et téléchargement des fichiers enregistrés (`dessins/`)
+* Gestion des fichiers enregistrés (`dessins/`) (mode admin)
+Session live (voir.php) :  
 * Visualisation en live des dessins générés par un admin
+Gestion du locking (manage_lock.php) :
+* Suppression du locking en cas de conflit (mode admin)
 
 ---
 
@@ -24,17 +31,19 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 excalidraw/
 ├── index.php              # Page d'accueil / login
 ├── dashboard.php          # Tableau de bord des utilisateurs
-├── dessin.php             # Interface de dessin
-├── save_dessin.php        # Sauvegarde des dessins
-├── save_json.php          # Sauvegarde au format JSON
 ├── delete_dessin.php      # Suppression de dessins
-├── view_dessin.php        # Visualisation des dessins
+├── dessin.php             # Interface de dessin
+├── fichiers.php           # Gestion des fichiers
+├── heartbeat_lock.php     # Vérification/verrouillage concurrentiel
 ├── login.php              # Page de connexion
 ├── logout.php             # Déconnexion
-├── fichiers.php           # Gestion des fichiers
+├── manage_lock.php        # Suppression du fichier lock en cas de conflit
 ├── page_ouverte.php       # Gestion des sessions de dessin ouvertes
-├── heartbeat_lock.php     # Vérification/verrouillage concurrentiel
 ├── release_lock.php       # Libération des verrous
+├── save_dessin.php        # Sauvegarde des dessins
+├── save_json.php          # Sauvegarde au format JSON
+├── view_dessin.php        # Visualisation des dessins
+├── voir.php               # Visualisation en live des dessins
 │
 ├── css/
 │   └── style.css          # Feuilles de style
