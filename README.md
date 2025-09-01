@@ -12,7 +12,7 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 
 ### ⚙️ Tableau de bord (`dashboard.php`)  
 - 📊 Affichage des différents outils
-- 🔧 Affichage de l'outil "Gérer les verrous" (mode admin)
+- 🔧 Affichage de l'outil "Gérer les verrous" *(mode admin)*
 
 ### 🎨 Outil de dessin (`dessin.php`)
 - 🔒 Verrouillage de l’outil de dessin pour éviter les conflits (système de lock)  
