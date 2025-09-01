@@ -32,6 +32,21 @@ let interval = 1000;        // Intervalle initial en ms
 let inactivityTime = 0;     // Temps d'inactivité en ms
 const baseInterval = 1000;  
 
+// Fonction pour verrouiller tous les objets
+function lockAllObjects() {
+    canvas.getObjects().forEach(obj => {
+        obj.selectable = false;
+        obj.evented = false;
+        obj.hasControls = false;
+        obj.lockMovementX = true;
+        obj.lockMovementY = true;
+        obj.lockScalingX = true;
+        obj.lockScalingY = true;
+        obj.lockRotation = true;
+    });
+}
+
+// Fonction de chargement JSON adaptatif
 async function loadJSON() {
     try {
         const response = await fetch('json/current.json?_=' + new Date().getTime());
@@ -39,14 +54,24 @@ async function loadJSON() {
         const jsonString = JSON.stringify(json);
 
         if (lastJSON !== jsonString) {
-            // Si changement détecté
+            // Changement détecté
             lastJSON = jsonString;
             inactivityTime = 0;
-            interval = baseInterval;  // Revenir à 2s
+            interval = baseInterval;  
+
             canvas.loadFromJSON(json, () => {
+                lockAllObjects();  // verrouillage immédiat
                 canvas.renderAll();
-                canvas.setWidth(canvas.getObjects()[0]?.canvasWidth || 1800);
-                canvas.setHeight(canvas.getObjects()[0]?.canvasHeight || 900);
+                
+                // Ajuster la taille du canvas selon le premier objet
+                const first = canvas.getObjects()[0];
+                if (first?.canvasWidth && first?.canvasHeight) {
+                    canvas.setWidth(first.canvasWidth);
+                    canvas.setHeight(first.canvasHeight);
+                } else {
+                    canvas.setWidth(1800);
+                    canvas.setHeight(900);
+                }
             });
         } else {
             // Pas de changement
@@ -62,7 +87,6 @@ async function loadJSON() {
     } catch (err) {
         console.error('Erreur lors du chargement du JSON:', err);
     } finally {
-        // Planifier le prochain rafraîchissement
         setTimeout(loadJSON, interval);
     }
 }

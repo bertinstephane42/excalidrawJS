@@ -220,6 +220,10 @@ include __DIR__ . '/inc/header.php';
   color: white;
 }
 
+.quit-btn {
+    font-weight: bold; /* si tu veux aussi du gras */
+}
+
 </style>
 
 <div class="editor-wrap">
@@ -320,11 +324,11 @@ include __DIR__ . '/inc/header.php';
 	<div class="group" aria-label="Reinit">
 		<button class="tool" id="resetCanvas">Réinitialiser</button>
 	</div>	
-	<div class="group" aria-label="Reinit">
-		<button class="tool" id="quit">Quitter</button>
-	</div>
     <div class="group" aria-label="Help">	
 		<button id="helpBtn" title="Aide">❓ Aide</button>
+	</div>
+	<div class="group" aria-label="Reinit">
+		<button class="tool quit-btn" id="quit">Quitter</button>
 	</div>
   </div>
 
@@ -398,66 +402,49 @@ include __DIR__ . '/inc/header.php';
 <script>
    const currentRole = <?php echo json_encode($_SESSION['role'] ?? 'etudiant'); ?>;
 
-	// Empêcher l'ouverture multiple de la page dessin.php
-	(function preventMultipleTabs() {
-		const LOCK_KEY = 'dessin_tab_lock';
-		const currentTimestamp = Date.now().toString();
+(function(){
+  // empêcher l'ouverture multiple de la page dessin.php
+  	const LOCK_KEY = 'dessin_tab_lock';
+	const currentTimestamp = Date.now().toString();
 
-		// Vérifie s'il y a déjà un verrou actif
-		const existingLock = localStorage.getItem(LOCK_KEY);
-		if (existingLock) {
-			alert("Cette page est déjà ouverte dans un autre onglet. Veuillez fermer l'autre onglet d'abord.");
-			window.location.href = "about:blank";
-			return;
+	// Vérifie s'il y a déjà un verrou actif
+	const existingLock = localStorage.getItem(LOCK_KEY);
+	if (existingLock) {
+		alert("Cette page est déjà ouverte dans un autre onglet. Veuillez fermer l'autre onglet d'abord.");
+		window.location.href = "dashboard.php";
+		return;
+	}
+	// Définir le verrou
+	localStorage.setItem(LOCK_KEY, currentTimestamp);
+	// Fonction pour libérer le lock
+	const releaseLock = () => {
+		const lock = localStorage.getItem(LOCK_KEY);
+		if (lock === currentTimestamp) {
+			localStorage.removeItem(LOCK_KEY);
 		}
-
-		// Définir le verrou
-		localStorage.setItem(LOCK_KEY, currentTimestamp);
-
-		// Fonction pour libérer le lock
-		const releaseLock = () => {
-			const lock = localStorage.getItem(LOCK_KEY);
-			if (lock === currentTimestamp) {
-				localStorage.removeItem(LOCK_KEY);
-			}
-
-			<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
-			navigator.sendBeacon('release_lock.php');
-			<?php endif; ?>
-			if (typeof heartbeatInterval !== 'undefined') clearInterval(heartbeatInterval);
-		};
-
-		// Nettoyer le verrou si l'onglet se ferme ou se rafraîchit
-		window.addEventListener('beforeunload', releaseLock);
-		window.addEventListener('unload', releaseLock); // fallback pour certains navigateurs
-
-		// Écoute les changements de verrou dans les autres onglets
-		window.addEventListener('storage', (event) => {
-			if (event.key === LOCK_KEY && event.newValue !== currentTimestamp) {
-				alert("Un autre onglet vient d'ouvrir cette page. Cet onglet va être désactivé.");
-				window.location.href = "about:blank";
-			}
-		});
-
 		<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+			navigator.sendBeacon('release_lock.php');
+			if (typeof heartbeatInterval !== 'undefined') clearInterval(heartbeatInterval);
+		<?php endif; ?>
+	};
+
+	// Écoute les changements de verrou dans les autres onglets
+	window.addEventListener('storage', (event) => {
+		if (event.key === LOCK_KEY && event.newValue !== currentTimestamp) {
+			alert("Un autre onglet vient d'ouvrir cette page. Cet onglet va être désactivé.");
+			window.location.href = "about:blank";
+		}
+	});
+
+	<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
 		// Heartbeat pour garder le lock “vivant”
 		const heartbeat = () => {
 			fetch('heartbeat_lock.php', { method: 'POST', keepalive: true });
 		};
 		heartbeat(); // lancement immédiat
 		const heartbeatInterval = setInterval(heartbeat, 30000); // toutes les 30s
-		<?php else: ?>
-		// Utilisateur non-admin : avertissement simple avant de quitter
-		window.addEventListener('beforeunload', (e) => {
-			if (!jsonReset) {
-				e.preventDefault();
-				e.returnValue = '';
-			}
-		});
-		<?php endif; ?>
-	})();
-
-(function(){
+	<?php endif; ?>
+	
   const canvasEl = document.getElementById('c');
   const canvas = new fabric.Canvas('c', {
     selection: true,
@@ -584,160 +571,159 @@ applySize(width, height);
 		};
 	}
 
-	// --- Zoom avec la molette ---
+	// --- Mouse Down ---
 	canvas.on('mouse:down', function(opt) {
-		const evt = opt.e;
-		const p = canvas.getPointer(evt);
+	  const evt = opt.e;
+	  const p = canvas.getPointer(evt);
 
-		// --- Panning ALT ---
-		if (evt.altKey) {
-			isPanning = true;
-			this.selection = false;
-			lastPosX = evt.clientX;
-			lastPosY = evt.clientY;
-			return;
-		}
+	  // --- Panning ALT ---
+	  if (evt.altKey) {
+		isPanning = true;
+		this.selection = false;
+		lastPosX = evt.clientX;
+		lastPosY = evt.clientY;
+		return;
+	  }
 
-		startPoint = p;
+	  startPoint = p;
 
-		// --- Outil texte ---
-		if (currentTool === 'text') {
-			const it = new fabric.IText('Texte', {
-				left: p.x,
-				top: p.y,
-				...getTextProps()
-			});
-			canvas.add(it).setActiveObject(it);
-			it.enterEditing();
-			it.selectAll();
-			isEditingText = true;
-			tempObj = null;
-			return;
-		}
+	  // --- Outil texte ---
+	  if (currentTool === 'text') {
+		const it = new fabric.IText('Texte', {
+		  left: p.x,
+		  top: p.y,
+		  ...getTextProps()
+		});
+		canvas.add(it).setActiveObject(it);
+		it.enterEditing();
+		it.selectAll();
+		isEditingText = true;
+		tempObj = null;
+		jsonReset = true;
+		return;
+	  }
 
-		// --- Formes simples ou flèches / losange ---
-		isDrawingShape = ['rect','ellipse','line','arrow','diamond'].includes(currentTool);
-		if (!isDrawingShape) return;
+	  // --- Formes simples ou flèches / losange ---
+	  isDrawingShape = ['rect','ellipse','line','arrow','diamond'].includes(currentTool);
+	  if (!isDrawingShape) return;
 
-		const props = getCommonProps();
+	  const props = getCommonProps();
 
-		if (currentTool === 'rect') {
-			tempObj = new fabric.Rect({
-				left: p.x, top: p.y, width: 1, height: 1, ...props
-			});
-		} else if (currentTool === 'ellipse') {
-			tempObj = new fabric.Ellipse({
-				left: p.x, top: p.y, rx: 0.5, ry: 0.5,
-				originX: 'left', originY: 'top',
-				...props
-			});
-		} else if (currentTool === 'line') {
-			tempObj = new fabric.Line([p.x, p.y, p.x, p.y], {
-				...props, fill: undefined
-			});
-		} else if (currentTool === 'arrow') {
-			isDrawingArrow = true; // création finale dans mouse:up
-			tempObj = null;        // juste pour flag
-		} else if (currentTool === 'diamond') {
-			const points = [
-				{ x: 0, y: -50 },  // haut
-				{ x: 50, y: 0 },   // droite
-				{ x: 0, y: 50 },   // bas
-				{ x: -50, y: 0 }   // gauche
-			];
-			tempObj = new fabric.Polygon(points, {
-				left: p.x, top: p.y,
-				originX: 'center', originY: 'center',
-				...props
-			});
-		}
-
-		if (tempObj) canvas.add(tempObj);
+	  if (currentTool === 'rect') {
+		tempObj = new fabric.Rect({
+		  left: p.x, top: p.y, width: 1, height: 1, ...props
+		});
+	  } else if (currentTool === 'ellipse') {
+		tempObj = new fabric.Ellipse({
+		  left: p.x, top: p.y, rx: 0.5, ry: 0.5,
+		  originX: 'left', originY: 'top',
+		  ...props
+		});
+	  } else if (currentTool === 'line') {
+		tempObj = new fabric.Line([p.x, p.y, p.x, p.y], {
+		  ...props, fill: undefined
+		});
+	  } else if (currentTool === 'arrow') {
+		isDrawingArrow = true; // création finale dans mouse:up
+		tempObj = null;
+	  } else if (currentTool === 'diamond') {
+		tempObj = new fabric.Polygon([
+		  { x: 0, y: -50 },
+		  { x: 50, y: 0 },
+		  { x: 0, y: 50 },
+		  { x: -50, y: 0 }
+		], {
+		  left: p.x, top: p.y,
+		  originX: 'center', originY: 'center',
+		  ...props
+		});
+	  }
+	  jsonReset = true;
 	});
 
+	// --- Mouse Move ---
 	canvas.on('mouse:move', function(opt) {
-		const evt = opt.e;
-		const p = canvas.getPointer(evt);
+	  const evt = opt.e;
+	  const p = canvas.getPointer(evt);
 
-		// --- Panning ---
-		if (isPanning) {
-			const vpt = this.viewportTransform;
-			vpt[4] += evt.clientX - lastPosX;
-			vpt[5] += evt.clientY - lastPosY;
-			this.requestRenderAll();
-			lastPosX = evt.clientX;
-			lastPosY = evt.clientY;
-			return; // <- ici ok
+	  // --- Panning ---
+	  if (isPanning) {
+		const vpt = this.viewportTransform;
+		vpt[4] += evt.clientX - lastPosX;
+		vpt[5] += evt.clientY - lastPosY;
+		this.requestRenderAll();
+		lastPosX = evt.clientX;
+		lastPosY = evt.clientY;
+		return;
+	  }
+
+	  if (!isDrawingShape || !startPoint) return;
+
+	  // --- Ajouter le tempObj au canvas au premier move ---
+	  if (tempObj && !canvas.contains(tempObj)) {
+		canvas.add(tempObj);
+	  }
+
+	  // --- Aperçu rect / ellipse / line ---
+	  if (tempObj && ['rect','ellipse','line'].includes(currentTool)) {
+		if (currentTool === 'rect') {
+		  const w = p.x - startPoint.x;
+		  const h = p.y - startPoint.y;
+		  tempObj.set({
+			width: Math.abs(w),
+			height: Math.abs(h),
+			left: w < 0 ? p.x : startPoint.x,
+			top: h < 0 ? p.y : startPoint.y
+		  });
+		} else if (currentTool === 'ellipse') {
+		  const rx = Math.abs(p.x - startPoint.x)/2;
+		  const ry = Math.abs(p.y - startPoint.y)/2;
+		  tempObj.set({
+			rx, ry,
+			left: Math.min(p.x, startPoint.x),
+			top: Math.min(p.y, startPoint.y)
+		  });
+		} else if (currentTool === 'line') {
+		  tempObj.set({ x2: p.x, y2: p.y });
 		}
+		tempObj.setCoords();
+		canvas.requestRenderAll();
+	  }
 
-		// --- Si on ne dessine pas, on ne bloque pas les autres objets (comme le texte) ---
-		if (!isDrawingShape || !startPoint) {
-			return; // Fabric gère le déplacement du texte tout seul
-		}
+	  // --- Aperçu losange ---
+	  if (currentTool === 'diamond' && tempObj) {
+		const cx = (startPoint.x + p.x) / 2;
+		const cy = (startPoint.y + p.y) / 2;
+		const w = Math.abs(p.x - startPoint.x);
+		const h = Math.abs(p.y - startPoint.y);
 
-		// --- Aperçu des formes ---
-		if (tempObj && ['rect','ellipse','line'].includes(currentTool)) {
-			if (currentTool === 'rect') {
-				const w = p.x - startPoint.x;
-				const h = p.y - startPoint.y;
-				tempObj.set({
-					width: Math.abs(w),
-					height: Math.abs(h),
-					left: w < 0 ? p.x : startPoint.x,
-					top: h < 0 ? p.y : startPoint.y
-				});
-			} else if (currentTool === 'ellipse') {
-				const rx = Math.abs(p.x - startPoint.x)/2;
-				const ry = Math.abs(p.y - startPoint.y)/2;
-				tempObj.set({ 
-					rx, ry, 
-					left: Math.min(p.x, startPoint.x), 
-					top: Math.min(p.y, startPoint.y) 
-				});
-			} else if (currentTool === 'line') {
-				tempObj.set({ x2: p.x, y2: p.y });
-			}
-			tempObj.setCoords();
-			canvas.requestRenderAll();
-		}
+		tempObj.set({
+		  left: cx,
+		  top: cy,
+		  points: [
+			{ x: 0,   y: -h/2 },
+			{ x: w/2, y: 0 },
+			{ x: 0,   y: h/2 },
+			{ x:-w/2, y: 0 }
+		  ],
+		  dirty: true
+		});
+		tempObj.setCoords();
+		canvas.requestRenderAll();
+	  }
 
-		// --- Aperçu losange ---
-		if (currentTool === 'diamond' && tempObj) {
-			const cx = (startPoint.x + p.x) / 2;
-			const cy = (startPoint.y + p.y) / 2;
-			const w = Math.abs(p.x - startPoint.x);
-			const h = Math.abs(p.y - startPoint.y);
-
-			tempObj.set({
-				left: cx,
-				top: cy,
-				points: [
-					{ x: 0,   y: -h/2 },
-					{ x: w/2, y: 0    },
-					{ x: 0,   y:  h/2 },
-					{ x:-w/2, y: 0    }
-				],
-				dirty: true
-			});
-			tempObj.setCoords();
-			canvas.requestRenderAll();
-		}
-
-		// --- Aperçu flèche ---
-		if (currentTool === 'arrow' && isDrawingArrow) {
-			canvas.requestRenderAll();
-		}
+	  // --- Aperçu flèche ---
+	  if (currentTool === 'arrow' && isDrawingArrow) {
+		canvas.requestRenderAll();
+	  }
 	});
 
+	// --- Mouse Up ---
 	canvas.on('mouse:up', function(opt) {
 	  isPanning = false;
 	  this.selection = true;
 
-	  const active = canvas.getActiveObject();
-
-	  // --- Si on était en train d’éditer un texte ---
 	  if (isEditingText) {
-		// On ne touche pas au tool; on laisse l'édition gérer sa fin via 'editing:exited'
 		tempObj = null;
 		startPoint = null;
 		return;
@@ -746,44 +732,40 @@ applySize(width, height);
 	  const p = canvas.getPointer(opt.e);
 
 	  // --- Flèche ---
-	 if (currentTool === 'arrow') {
-		const pointer = canvas.getPointer(opt.e);
-		const arrow = addArrow({ x: startPoint.x, y: startPoint.y }, pointer, typeFleche);
+	  if (currentTool === 'arrow') {
+		const arrow = addArrow(startPoint, p, typeFleche);
 		canvas.add(arrow);
-		finalizeObject(arrow);  // pour activer et rendre sélectionnable
+		finalizeObject(arrow);
+		canvas.setActiveObject(arrow);
 		tempObj = null;
 		startPoint = null;
 		isDrawingShape = false;
 		isDrawingArrow = false;
 		currentTool = 'select';
 		return;
-	}
+	  }
 
 	  // --- Losange ---
 	  if (currentTool === 'diamond' && startPoint) {
+		if (tempObj) canvas.remove(tempObj); // enlever la preview
 		const cx = (startPoint.x + p.x) / 2;
 		const cy = (startPoint.y + p.y) / 2;
 		const w = Math.abs(p.x - startPoint.x);
 		const h = Math.abs(p.y - startPoint.y);
 		const props = getCommonProps();
 
-		if (tempObj) canvas.remove(tempObj); // par sécurité
-
 		const diamond = new fabric.Polygon([
 		  { x: 0,   y: -h/2 },
-		  { x: w/2, y: 0    },
+		  { x: w/2, y: 0 },
 		  { x: 0,   y:  h/2 },
-		  { x:-w/2, y: 0    }
+		  { x:-w/2, y: 0 }
 		], {
-		  left: cx, top: cy, originX: 'center', originY: 'center',
-		  perPixelTargetFind: true, hitStrokeWidth: 12,
-		  hoverCursor: 'move', hasControls: true,
-		  lockMovementX: false, lockMovementY: false,
-		  objectCaching: false, ...props
+		  left: cx, top: cy,
+		  originX: 'center', originY: 'center',
+		  ...props
 		});
 
 		canvas.add(diamond);
-		diamond.setCoords();
 		finalizeObject(diamond);
 		canvas.setActiveObject(diamond);
 
@@ -794,29 +776,19 @@ applySize(width, height);
 		return;
 	  }
 
-	  // --- Gardes pour les autres formes ---
-	  if (!tempObj || !startPoint) return;
-
-	  // --- Texte (au cas où) ---
-	  if (tempObj && (tempObj.type === 'text' || tempObj.type === 'i-text' || tempObj.type === 'textbox')) {
+	  // --- Rect / Ellipse / Line ---
+	  if (tempObj) {
 		finalizeObject(tempObj);
-		tempObj = null;
-		startPoint = null;
-		return;
+		tempObj.setCoords();
+		canvas.setActiveObject(tempObj);
 	  }
-
-	  // --- Rect / Ellipse / Ligne ---
-	  finalizeObject(tempObj);
-	  tempObj.set({ selectable: true, evented: true, hasControls: true, lockMovementX: false, lockMovementY: false });
-	  tempObj.setCoords();
-	  canvas.setActiveObject(tempObj);
 
 	  tempObj = null;
 	  startPoint = null;
 	  isDrawingShape = false;
 	  currentTool = 'select';
 	  saveJsonRealtime();
-	  jsonReset = false;
+	  jsonReset = true;
 	});
 
 	// Version throttlée pour le déplacement
@@ -832,6 +804,7 @@ applySize(width, height);
 	// Sauvegarde au mouvement en temps réel (avec throttle)
 	canvas.on('object:moving', () => {
 	  saveJsonRealtimeThrottled();
+	  jsonReset = true;
 	});
 
   // --- Tools State ---
@@ -994,6 +967,11 @@ applySize(width, height);
 		// Tous les objets (hors grille) devant
 		canvas.getObjects().forEach(obj => {
 		  if (!obj.excludeFromExport) obj.bringToFront();
+		  
+		  // Supprimer les objets avec une taille nulle ou quasi nulle
+		  if (Math.abs(obj.width * obj.scaleX) < 1 || Math.abs(obj.height * obj.scaleY) < 1) {
+			  canvas.remove(obj);
+			}
 		});
 		canvas.renderAll();
 		isRestoring = false;
@@ -1180,7 +1158,7 @@ applySize(width, height);
 		active.set({ dirty: true }); // facultatif, juste pour signaler changement
 		canvas.fire('object:modified', { target: active }); // déclenche l'événement Fabric.js
 		saveJsonRealtime(); // sauvegarde immédiate
-		jsonReset = false;
+		jsonReset = true;
 	});
 
 	function saveToServer(type, data) {
@@ -1422,7 +1400,7 @@ applySize(width, height);
 		const fileInput = document.getElementById('importJSON');
 		if (fileInput) fileInput.value = '';
 
-		jsonReset = true;
+		jsonReset = false;
 	}
 
 	// Écouteur pour le clic manuel
@@ -1436,7 +1414,7 @@ applySize(width, height);
 			obj.set({ fontFamily: fontFamily.value });
 			canvas.requestRenderAll();
 			saveJsonRealtime();
-			jsonReset = false;
+			jsonReset = true;
 		}
 	});
 
@@ -1448,7 +1426,7 @@ applySize(width, height);
 		obj.set({ fontSize: parseInt(fontSize.value, 10) });
 		canvas.requestRenderAll();
 		saveJsonRealtime();
-		jsonReset = false;
+		jsonReset = true;
 	  }
 	});
 
@@ -1461,7 +1439,7 @@ applySize(width, height);
 		obj.set({ fontWeight: newWeight });
 		canvas.requestRenderAll();
 		saveJsonRealtime();
-		jsonReset = false;
+		jsonReset = true;
 	  }
 	});
 
@@ -1474,7 +1452,7 @@ applySize(width, height);
 		obj.set({ fontStyle: newStyle });
 		canvas.requestRenderAll();
 		saveJsonRealtime();
-		jsonReset = false;
+		jsonReset = true;
 	  }
 	});
 
@@ -1486,7 +1464,7 @@ applySize(width, height);
 		obj.set({ fontWeight: 'normal', fontStyle: 'normal' });
 		canvas.requestRenderAll();
 		saveJsonRealtime();
-		jsonReset = false;
+		jsonReset = true;
 	  }
 	});
 
@@ -1506,7 +1484,7 @@ applySize(width, height);
 	}
 	
 	// Intercepter tous les liens sensibles dans le header
-	document.querySelectorAll('.navbar .nav-btn').forEach(link => {
+	document.querySelectorAll('.navbar .nav-btn, .navbar .home-btn, .navbar .adm-btn, .navbar .logout').forEach(link => {
 		link.addEventListener('click', function(e) {
 			// On définit les liens qui nécessitent une confirmation
 			const sensitive = ['dashboard.php', 'dessin.php', 'fichiers.php', 'logout.php', 'manage_lock.php', 'voir.php']; // exemple : quitter ou supprimer
@@ -1567,12 +1545,21 @@ applySize(width, height);
 	  }, SAVE_INTERVAL);
 	}
 
-	// Événements pour déclencher la sauvegarde et remettre jsonReset à false
-	['object:added', 'object:removed', 'object:scaling', 'object:rotating'].forEach(evt => {
-	  canvas.on(evt, () => {
-		saveJsonRealtime();
-		jsonReset = false;
-	  });
+	// Fonction pour activer le suivi des objets
+	function activateCanvasEvents() {
+		['object:added', 'object:removed', 'object:scaling', 'object:rotating'].forEach(evt => {
+			canvas.on(evt, () => {
+				saveJsonRealtime();
+				jsonReset = true;
+			});
+		});
+	}
+
+	// Appel automatique après l'initialisation du canvas
+	canvas.on('after:render', function initEventsOnce() {
+		activateCanvasEvents();
+		// On supprime ce listener pour ne pas réactiver plusieurs fois
+		canvas.off('after:render', initEventsOnce);
 	});
 	
 	document.addEventListener('DOMContentLoaded', () => {
@@ -1595,6 +1582,18 @@ applySize(width, height);
 				}
 			});
 		});
+
+		// Avant fermeture / rechargement : avertissement
+		window.addEventListener("beforeunload", function(e) {
+			if (jsonReset) { // si données non sauvegardées
+				e.preventDefault();
+				e.returnValue = ''; // déclenche le prompt générique
+			}
+		});
+		window.addEventListener("pagehide", function(e) {
+			releaseLock(); // safe, peut utiliser sendBeacon ou fetch keepalive
+		});
+		
 		// Bouton Quitter
 		document.getElementById('quit').addEventListener('click', () => {
 			const confirmQuit = confirm("Voulez-vous vraiment quitter l'outil ?");
@@ -1602,13 +1601,14 @@ applySize(width, height);
 
 			// Reset sans confirmation
 			resetCanvas(true);
-
-			// Libération lock / redirection
-			<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+			
 			if (localStorage.getItem('dessin_tab_lock')) {
 				localStorage.removeItem('dessin_tab_lock');
 			}
-			navigator.sendBeacon('release_lock.php');
+
+			// Libération lock / redirection
+			<?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
+				navigator.sendBeacon('release_lock.php');
 			<?php endif; ?>
 
 			// Redirection
