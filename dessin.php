@@ -364,9 +364,9 @@ include __DIR__ . '/inc/header.php';
     <ul>
       <li><b>ALT + clic + molette :</b> panning (déplacement du canvas).</li>
       <li><b>SHIFT + molette :</b> zoom avant/arrière.</li>
-      <li><b>CTRL/CMD + Z :</b> Undo.</li>
-      <li><b>CTRL/CMD + Y ou CTRL + SHIFT + Z :</b> Redo.</li>
-      <li><b>CTRL/CMD + D :</b> Dupliquer l’objet sélectionné.</li>
+      <li><b>CTRL + Z :</b> Undo.</li>
+      <li><b>CTRL + Y ou CTRL + SHIFT + Z :</b> Redo.</li>
+      <li><b>CTRL + D :</b> Dupliquer l’objet sélectionné.</li>
       <li><b>DEL / SUPPR :</b> supprimer l’objet sélectionné.</li>
       <li><b>Flèches clavier :</b> déplacer finement l’objet sélectionné (1px).</li>
       <li><b>SHIFT + Flèches :</b> déplacement rapide (10px).</li>
@@ -1634,3 +1634,4 @@ applySize(width, height);
 </script>
 
 </body></html>
+
