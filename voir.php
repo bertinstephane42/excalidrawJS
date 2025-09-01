@@ -18,7 +18,7 @@ html, body {
 }
 </style>
 
-<h2>Visionneuse de dessin (lecture seule)</h2>
+<h2>Visionneuse de dessin</h2>
 <canvas id="c"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/fabric@5.2.4/dist/fabric.min.js"></script>
@@ -75,4 +75,5 @@ async function loadJSON() {
 
 // démarrage
 loadJSON();
+
 </script>
