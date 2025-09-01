@@ -17,9 +17,17 @@ if (!$data) {
     exit;
 }
 
+// JSON non nul
+$json = json_decode($data, true);
+if ($json === null && json_last_error() !== JSON_ERROR_NONE) {
+    http_response_code(400);
+    echo "Format JSON invalide";
+    exit;
+}
+
 // Assure-toi que le dossier existe
 $dir = __DIR__ . "/json";
-if (!is_dir($dir)) mkdir($dir, 0777, true);
+if (!is_dir($dir)) mkdir($dir, 0755, true);
 
 // Écriture du fichier
 $file = $dir . "/current.json";
