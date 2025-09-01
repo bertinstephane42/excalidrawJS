@@ -1400,6 +1400,7 @@ applySize(width, height);
 		const fileInput = document.getElementById('importJSON');
 		if (fileInput) fileInput.value = '';
 
+		saveJsonRealtime();
 		jsonReset = false;
 	}
 
@@ -1594,6 +1595,16 @@ applySize(width, height);
 			releaseLock(); // safe, peut utiliser sendBeacon ou fetch keepalive
 		});
 		
+		function saveJsonImmediateEmpty() {
+		  if (currentRole !== 'admin') return;
+		  
+		  const emptyJson = JSON.stringify({"version":"5.2.4","objects":[],"background":"#ffffff"});
+		  const formData = new FormData();
+		  formData.append('data', emptyJson);
+
+		  navigator.sendBeacon("save_json.php", formData);
+		}
+		
 		// Bouton Quitter
 		document.getElementById('quit').addEventListener('click', () => {
 			const confirmQuit = confirm("Voulez-vous vraiment quitter l'outil ?");
@@ -1601,6 +1612,9 @@ applySize(width, height);
 
 			// Reset sans confirmation
 			resetCanvas(true);
+			
+			// Sauvegarde forcée d’un JSON vide
+			saveJsonImmediateEmpty();
 			
 			if (localStorage.getItem('dessin_tab_lock')) {
 				localStorage.removeItem('dessin_tab_lock');
@@ -1634,4 +1648,3 @@ applySize(width, height);
 </script>
 
 </body></html>
-
