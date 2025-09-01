@@ -72,6 +72,79 @@ body {
   background-color: #b91c1c;
 }
 
+/* Bouton administrateur */
+.adm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.5rem;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: #10b981; /* vert émeraude */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transition: background-color 0.3s, transform 0.2s, box-shadow 0.2s;
+}
+
+.adm-btn:hover {
+  background-color: #047857; /* vert plus foncé au survol */
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+/* Boutons de navigation */
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.5rem;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: #2563eb;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transition: background-color 0.3s, transform 0.2s, box-shadow 0.2s;
+}
+
+.nav-btn:hover {
+  background-color: #1e40af;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+/* Bouton déconnexion distinct */
+.nav-btn.logout {
+  background-color: #ef4444;
+}
+
+.nav-btn.logout:hover {
+  background-color: #b91c1c;
+}
+
+.home-btn {
+  /* Héritage des styles nav-btn */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1.5rem;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: #f59e0b; /* orange clair */
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transition: background-color 0.3s, transform 0.2s, box-shadow 0.2s;
+}
+
+/* Hover spécifique Accueil */
+.home-btn:hover {
+  background-color: #b45309; /* orange plus foncé */
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
 /* Conteneur principal (dashboard, pages) */
 .main-app {
   max-width: 1000px;
@@ -140,6 +213,22 @@ input, select {
 
 .dash-btn:hover {
   background-color: #1e40af;
+  transform: translateY(-2px);
+}
+
+.dashadm-btn {
+  display: block;
+  padding: 0.8rem 1.5rem;
+  background-color: #10b981;
+  color: #ffffff;
+  font-weight: 500;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.dashadm-btn:hover {
+  background-color: #047857;
   transform: translateY(-2px);
 }
 
