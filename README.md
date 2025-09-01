@@ -6,22 +6,26 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 
 ## 🚀 Fonctionnalités
 
-Générale :
-* Authentification utilisateur (connexion / déconnexion)
-* Protection des répertoires sensibles via `.htaccess` (`inc/`)
-* Tableau de bord
-Outil de dessin (dessin.php) :
-* Verrouillage de l'outil de dessin pour éviter les conflits (système de lock)
-* Création de dessins via une interface interactive
-* Sauvegarde des dessins au format PNG, SVG et JSON
-* Import et modification de dessins existants (fichiers JSON)
-Visualisation des dessins (fichiers.php) :
-* Visualisation et téléchargement des fichiers enregistrés (`dessins/`)
-* Gestion des fichiers enregistrés (`dessins/`) (mode admin)
-Session live (voir.php) :  
-* Visualisation en live des dessins générés par un admin
-Gestion du locking (manage_lock.php) :
-* Suppression du locking en cas de conflit (mode admin)
+### ⚙️ Générale
+- 🔐 Authentification utilisateur (connexion / déconnexion)  
+- 🛡️ Protection des répertoires sensibles via `.htaccess` (`inc/`)  
+- 📊 Tableau de bord  
+
+### 🎨 Outil de dessin (`dessin.php`)
+- 🔒 Verrouillage de l’outil de dessin pour éviter les conflits (système de lock)  
+- ✏️ Création de dessins via une interface interactive  
+- 💾 Sauvegarde des dessins aux formats **PNG**, **SVG** et **JSON**  
+- 📂 Import et modification de dessins existants (fichiers JSON)  
+
+### 👁️ Visualisation des dessins (`fichiers.php`)
+- 📑 Visualisation et téléchargement des fichiers enregistrés (`dessins/`)  
+- 🛠️ Gestion des fichiers enregistrés (`dessins/`) *(mode admin)*  
+
+### 📡 Session live (`voir.php`)
+- 🎥 Visualisation **en temps réel** des dessins générés par un admin  
+
+### 🔧 Gestion du locking (`manage_lock.php`)
+- 🗑️ Suppression manuelle du verrouillage en cas de conflit *(mode admin)*  
 
 ---
 
