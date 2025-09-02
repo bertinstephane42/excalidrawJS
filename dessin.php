@@ -400,6 +400,15 @@ include __DIR__ . '/inc/header.php';
 <!-- Fabric.js depuis CDN (compatible mutualisé, pas de Node) -->
 <script src="https://cdn.jsdelivr.net/npm/fabric@5.2.4/dist/fabric.min.js"></script>
 <script>
+<!-- Fallback local si le CDN échoue -->
+  if (typeof fabric === "undefined") {
+    var script = document.createElement("script");
+    script.src = "js/fabric.min.js"; // copie locale
+    document.head.appendChild(script);
+  }
+</script>
+
+<script>
    const currentRole = <?php echo json_encode($_SESSION['role'] ?? 'etudiant'); ?>;
 
 (function(){
@@ -1666,4 +1675,3 @@ applySize(width, height);
 </script>
 
 </body></html>
-
