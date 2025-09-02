@@ -1337,40 +1337,58 @@ applySize(width, height);
 		if (!confirm("Voulez-vous vraiment importer ce dessin en JSON ?")) {
 			return;
 		}
-	  const file = e.target.files[0];
-	  if (!file) return;
+		const file = e.target.files[0];
+		if (!file) return;
 
-	  const reader = new FileReader();
-	  reader.onload = (evt) => {
-		try {
-		  const json = JSON.parse(evt.target.result);
-
-		  // 1. Charger le JSON
-		  canvas.loadFromJSON(json, () => {
-				// Redimensionner
-				const { width, height } = calculateOptimalSize();
-				canvas.setDimensions({ width, height });
-
-				// Redessiner la grille
-				drawGrid();
-
-				// Mettre la grille à l'arrière-plan
-				gridLines.forEach(line => line.sendToBack());
-
-				// Mettre tous les objets importés devant la grille
-				canvas.getObjects().forEach(obj => {
-					if (!gridLines.includes(obj)) obj.bringToFront();
-				});
-
-				// Rendu final et sauvegarde
-				canvas.renderAll();
-				saveState();
-			});
-		} catch(err) {
-		  alert('Erreur lors de l’import JSON : ' + err.message);
+		// Taille max : 2 Mo
+		if (file.size > 2 * 1024 * 1024) {
+			alert("Fichier trop volumineux !");
+			return;
 		}
-	  };
-	  reader.readAsText(file);
+
+		const reader = new FileReader();
+		reader.onload = (evt) => {
+			try {
+				const json = JSON.parse(evt.target.result);
+
+				// ✅ Validation sécurité
+				if (json.objects) {
+					if (json.objects.length > 500) {
+						throw new Error("Trop d’objets dans le fichier !");
+					}
+					json.objects.forEach(obj => {
+						if (obj.type === 'image' && obj.src && obj.src.startsWith('http')) {
+							throw new Error("Import d’images externes interdit");
+						}
+					});
+				}
+
+				// 1. Charger le JSON
+				canvas.loadFromJSON(json, () => {
+					// Redimensionner
+					const { width, height } = calculateOptimalSize();
+					canvas.setDimensions({ width, height });
+
+					// Redessiner la grille
+					drawGrid();
+
+					// Mettre la grille à l'arrière-plan
+					gridLines.forEach(line => line.sendToBack());
+
+					// Mettre tous les objets importés devant la grille
+					canvas.getObjects().forEach(obj => {
+						if (!gridLines.includes(obj)) obj.bringToFront();
+					});
+
+					// Rendu final et sauvegarde
+					canvas.renderAll();
+					saveState();
+				});
+			} catch (err) {
+				alert('Erreur lors de l’import JSON : ' + err.message);
+			}
+		};
+		reader.readAsText(file);
 	});
 
 	// Bouton Réinitialiser
@@ -1648,3 +1666,4 @@ applySize(width, height);
 </script>
 
 </body></html>
+
