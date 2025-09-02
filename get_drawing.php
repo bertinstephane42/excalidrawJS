@@ -11,6 +11,11 @@ if (!file_exists($jsonPath)) {
     exit('Fichier non trouvé');
 }
 
+if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') !== 'XMLHttpRequest') {
+    http_response_code(403);
+    exit('Appel interdit');
+}
+
 // Forcer compression si dispo
 if (extension_loaded('zlib') && !ini_get('zlib.output_compression')) {
     ob_start('ob_gzhandler');

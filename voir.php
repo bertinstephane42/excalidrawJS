@@ -47,7 +47,9 @@ function lockAllObjects() {
 // charger le dessin depuis PHP (lecture seule)
 async function loadJSON() {
     try {
-        const response = await fetch('get_drawing.php?_=' + Date.now());
+        const response = await fetch('get_drawing.php?_=' + Date.now(), {
+			headers: { 'X-Requested-With': 'XMLHttpRequest' }
+		});
         if (!response.ok) throw new Error("Erreur serveur");
 
         const json = await response.json();
@@ -75,5 +77,4 @@ async function loadJSON() {
 
 // démarrage
 loadJSON();
-
 </script>
