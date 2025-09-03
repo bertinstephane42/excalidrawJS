@@ -466,8 +466,10 @@ include __DIR__ . '/inc/header.php';
   const CANVAS_MIN_WIDTH = 1800;
   const CANVAS_MIN_HEIGHT = 900;
   let gridLines = [];
+  let gridGroup = null; // variable globale pour stocker la grille
     // -- Redimensionnement fiable de .canvas-wrap
   const wrap = canvasEl.parentElement; // .canvas-wrap
+  
   
 	function calculateOptimalSize() {
 	  const containerRect = wrap.getBoundingClientRect();
@@ -480,43 +482,50 @@ include __DIR__ . '/inc/header.php';
 
 	function drawGrid() {
 	  // Supprimer les anciennes lignes de grille
-	  gridLines.forEach(line => canvas.remove(line));
-	  gridLines = [];
-
+	  if (gridGroup) {
+		canvas.remove(gridGroup);
+	  }
 	  const width = Math.floor(canvas.getWidth());
 	  const height = Math.floor(canvas.getHeight());
 
 	  const cols = Math.floor(width / grid);
 	  const rows = Math.floor(height / grid);
 
+	  const lines = [];
+
 	  // Colonnes
 	  for (let i = 0; i <= cols; i++) {
 		const x = i * grid;
-		const line = new fabric.Line([x, 0, x, height], {
+		lines.push(new fabric.Line([x, 0, x, height], {
 		  stroke: '#ccc',
 		  selectable: false,
-		  evented: false,
-		  excludeFromExport: true
-		});
-		canvas.add(line);
-		gridLines.push(line);
+		  evented: false
+		}));
 	  }
 
 	  // Lignes
 	  for (let i = 0; i <= rows; i++) {
 		const y = i * grid;
-		const line = new fabric.Line([0, y, width, y], {
+		lines.push(new fabric.Line([0, y, width, y], {
 		  stroke: '#ccc',
 		  selectable: false,
-		  evented: false,
-		  excludeFromExport: true
-		});
-		canvas.add(line);
-		gridLines.push(line);
+		  evented: false
+		}));
 	  }
 
-	  // Toujours renvoyer la grille en arrière-plan
-	  gridLines.forEach(line => line.sendToBack());
+	  // Créer un groupe figé et non interactif
+	  gridGroup = new fabric.Group(lines, {
+		selectable: false,
+		evented: false,
+		hasControls: false,
+		lockMovementX: true,
+		lockMovementY: true,
+		excludeFromExport: true
+	  });
+
+	  canvas.add(gridGroup);
+	  gridGroup.sendToBack();
+	  canvas.renderAll();
 	}
 
 	function saveState(){
@@ -1010,7 +1019,9 @@ applySize(width, height);
   saveState();
 
 	function finalizeObject(obj){
-		canvas.setActiveObject(obj);
+		// on ajoute l'objet mais on ne l'active pas automatiquement
+		canvas.discardActiveObject(); 
+		obj.setCoords();
 		canvas.requestRenderAll();
 		setActiveTool('select'); // bascule automatique sur sélection
 	}
