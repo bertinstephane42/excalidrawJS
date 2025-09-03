@@ -26,6 +26,10 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 
 ### 📡 Session live (`voir.php`)
 - 🎥 Visualisation **en temps réel** des dessins générés par un admin  
+- ⏱️ **Synchronisation continue** : chaque trait, forme ou annotation ajoutée par l’admin est diffusé en direct grâce au mécanisme de synchronisation serveur → clients  
+- 💬 **Chat intégré** permettant aux étudiants et à l’admin d’échanger instantanément pendant la session  
+- 🖌️ **Interaction limitée pour les étudiants** : ils peuvent observer le dessin et commenter via le chat, sans pouvoir modifier le contenu directement  
+- 🔒 **Sécurité et contrôle** : l’admin garde le contrôle sur la session, peut réinitialiser le dessin ou gérer les verrous pour éviter les conflits
 
 ### 🔧 Gestion du locking (`manage_lock.php`)
 - 🗑️ Suppression manuelle du verrouillage en cas de conflit *(mode admin)*  
@@ -37,15 +41,17 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 ```
 excalidraw/
 ├── index.php              # Page d'accueil / login
+├── chat_backend.php       # Gestion du chat
 ├── dashboard.php          # Tableau de bord des utilisateurs
-├── delete_dessin.php      # Suppression de dessins
+├── delete_chat.php        # Suppression du chat (admin)
+├── delete_dessin.php      # Suppression de dessins (admin)
 ├── dessin.php             # Interface de dessin
 ├── fichiers.php           # Gestion des fichiers
 ├── get_drawing.php        # Lecture du fichier current.json pour la visionneuse (voir.php)
 ├── heartbeat_lock.php     # Vérification/verrouillage concurrentiel
 ├── login.php              # Page de connexion
 ├── logout.php             # Déconnexion
-├── manage_lock.php        # Suppression du fichier lock en cas de conflit
+├── manage_lock.php        # Administration - gestion du lock partiel (etudiant) - gestion du lock et du chat (admin)
 ├── page_ouverte.php       # Gestion des sessions de dessin ouvertes
 ├── release_lock.php       # Libération des verrous
 ├── save_dessin.php        # Sauvegarde des dessins
