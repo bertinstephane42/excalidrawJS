@@ -22,6 +22,7 @@ foreach ($files as $file) {
     elseif (str_starts_with($name, 'bts2') && isset($sections['bts2'][$ext])) $sections['bts2'][$ext][] = $file;
     elseif (str_starts_with($name, 'lic3') && isset($sections['lic3'][$ext])) $sections['lic3'][$ext][] = $file;
 }
+$csrfToken = $_SESSION['csrf_token'] ?? '';
 ?>
 
 <div class="main-app">
@@ -75,10 +76,12 @@ foreach ($sections as $types) {
                           <a href="view_dessin.php?file=<?= urlencode($name) ?>" target="_blank" class="btn">Voir</a>
                           <a href="view_dessin.php?file=<?= urlencode($name) ?>&download=1" class="btn">Télécharger</a>
                           <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-                              <a href="delete_dessin.php?file=<?= urlencode($name) ?>" 
-                                 class="btn" 
-                                 onclick="return confirm('Supprimer ce fichier ?')">Supprimer</a>
-                          <?php endif; ?>
+							<form method="POST" action="delete_dessin.php" style="display:inline;" onsubmit="return confirm('Supprimer ce fichier ?')">
+								<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+								<input type="hidden" name="file" value="<?= htmlspecialchars($name) ?>">
+								<button type="submit" class="btn">Supprimer</button>
+							</form>
+						<?php endif; ?>
                         </div>
                       </div>
                       <?php endforeach; ?>
