@@ -14,6 +14,8 @@ if (!isset($_SESSION['chat_token'])) {
     $_SESSION['chat_token'] = bin2hex(random_bytes(16));
 }
 $chat_token = $_SESSION['chat_token'];
+$lockFile = __DIR__ . '/chat/chat.lock';
+$chatDisabled = file_exists($lockFile);
 ?>
 
 <style>
@@ -34,24 +36,32 @@ html, body { height: 100%; margin: 0; }
 
 <div id="headerBar">
     <h2>Visionneuse de dessin</h2>
-    <button id="chatToggle">💬</button>
+    <?php if (!$chatDisabled): ?>
+        <button id="chatToggle">💬</button>
+    <?php else: ?>
+      <span title="Chat désactivé" style="font-size:1.4em; color:#d00;">
+        💬🚫
+	  </span>
+    <?php endif; ?>
 </div>
 
 <canvas id="c"></canvas>
 
 <!-- Modale de chat -->
-<div id="chatModal">
-    <div id="chatHeader">
-        <span>💬 Chat</span>
-        <button id="chatLogout" title="Déconnexion">❌</button>
-    </div>
-    <input type="text" id="chatLogin" placeholder="Votre login">
-    <div id="chatMessages"></div>
-    <form id="chatForm">
-        <input type="text" id="chatInput" placeholder="Votre message...">
-        <button type="submit">➤</button>
-    </form>
-</div>
+<?php if (!$chatDisabled): ?>
+	<div id="chatModal">
+		<div id="chatHeader">
+			<span>💬 Chat</span>
+			<button id="chatLogout" title="Déconnexion">❌</button>
+		</div>
+		<input type="text" id="chatLogin" placeholder="Votre login">
+		<div id="chatMessages"></div>
+		<form id="chatForm">
+			<input type="text" id="chatInput" placeholder="Votre message...">
+			<button type="submit">➤</button>
+		</form>
+	</div>
+<?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/fabric@5.2.4/dist/fabric.min.js"></script>
 <script>
@@ -65,6 +75,7 @@ html, body { height: 100%; margin: 0; }
 
 <script>
 const authToken = '<?= $chat_token ?>'; // Token généré côté PHP
+const chatDisabled = <?= $chatDisabled ? 'true' : 'false' ?>;
 </script>
 
 <script>
@@ -166,6 +177,13 @@ chatForm.addEventListener('submit', async (e) => {
     const msg = chatInput.value.trim();
     if (!login) { alert("Veuillez entrer un login."); return; }
     if (!msg) return;
+	
+	// Vérifier si le chat a été désactivé dynamiquement
+    if (chatDisabled) {
+        alert("Chat désactivé par l'administrateur"); // même message que pour login
+        chatInput.value = '';
+        return;
+    }
 
     // --- connexion si nécessaire
     if (!connected) {

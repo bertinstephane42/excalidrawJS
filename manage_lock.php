@@ -20,6 +20,9 @@ if ($isAdmin) {
     $csrfToken = $_SESSION['csrf_token'];
     echo "<script>const csrfToken = " . json_encode($csrfToken) . ";</script>";
 }
+
+$lockFile = __DIR__ . '/chat/chat.lock';
+$chatDisabled = file_exists($lockFile);
 ?>
 <style>
 .button-row {
@@ -50,6 +53,8 @@ if ($isAdmin) {
 #releaseLockBtn.uniform-btn:hover { background-color: #047857; }
 #deleteChatBtn.uniform-btn { background-color: #ef4444; color: #fff; }
 #deleteChatBtn.uniform-btn:hover { background-color: #b91c1c; }
+#toggleChatBtn.uniform-btn { background-color: #f59e0b; color: #fff; }
+#toggleChatBtn.uniform-btn:hover { background-color: #b45309; }
 .submenu {
     display: flex;
     gap: 10px;
@@ -71,8 +76,10 @@ if ($isAdmin) {
         <div class="submenu">
             <button id="tabLock" class="active">Gestion des verrous</button>
             <button id="tabDeleteChat">Supprimer le chat</button>
+            <button id="tabToggleChat">Activation du chat</button>
         </div>
 
+        <!-- Section verrous -->
         <div id="sectionLocks">
             <p>Depuis cette section, vous pouvez forcer la suppression du verrou côté serveur et effacer le verrouillage local (onglets).</p>
             <div class="button-row">
@@ -81,12 +88,26 @@ if ($isAdmin) {
             </div>
         </div>
 
+        <!-- Section suppression du chat -->
         <div id="sectionDeleteChat" style="display:none;">
             <p>Attention : cette action supprimera tous les messages et utilisateurs du chat.</p>
             <div class="button-row">
                 <button id="deleteChatBtn" class="uniform-btn">🗑️ Supprimer le chat</button>
             </div>
             <div id="resultDeleteChat" style="margin-top:15px; font-weight:bold;"></div>
+        </div>
+
+        <!-- Section activation/désactivation du chat -->
+        <div id="sectionToggleChat" style="display:none;">
+            <p>État actuel du chat : 
+                <strong id="chatState"><?= $chatDisabled ? "❌ Désactivé" : "✅ Activé" ?></strong>
+            </p>
+            <div class="button-row">
+                <button id="toggleChatBtn" class="uniform-btn">
+                    <?= $chatDisabled ? "Activer le chat" : "Désactiver le chat" ?>
+                </button>
+            </div>
+            <div id="resultToggleChat" style="margin-top:15px; font-weight:bold;"></div>
         </div>
 
     <?php else: ?>
@@ -142,22 +163,37 @@ if ($isAdmin) {
 <?php if ($isAdmin): ?>
 const tabLock = document.getElementById("tabLock");
 const tabDelete = document.getElementById("tabDeleteChat");
+const tabToggle = document.getElementById("tabToggleChat");
 const sectionLocks = document.getElementById("sectionLocks");
 const sectionDelete = document.getElementById("sectionDeleteChat");
+const sectionToggle = document.getElementById("sectionToggleChat");
 
 tabLock.addEventListener("click", () => {
     tabLock.classList.add("active");
     tabDelete.classList.remove("active");
+    tabToggle.classList.remove("active");
     sectionLocks.style.display = "block";
     sectionDelete.style.display = "none";
+    sectionToggle.style.display = "none";
 });
 tabDelete.addEventListener("click", () => {
     tabDelete.classList.add("active");
     tabLock.classList.remove("active");
+    tabToggle.classList.remove("active");
     sectionLocks.style.display = "none";
     sectionDelete.style.display = "block";
+    sectionToggle.style.display = "none";
+});
+tabToggle.addEventListener("click", () => {
+    tabToggle.classList.add("active");
+    tabLock.classList.remove("active");
+    tabDelete.classList.remove("active");
+    sectionLocks.style.display = "none";
+    sectionDelete.style.display = "none";
+    sectionToggle.style.display = "block";
 });
 <?php endif; ?>
+
 
 // 🔹 Gestion de la suppression des verrous
 document.getElementById("releaseLockBtn").addEventListener("click", () => {
@@ -184,7 +220,7 @@ document.getElementById("releaseLockBtn").addEventListener("click", () => {
 <?php if ($isAdmin): ?>
 document.getElementById("deleteChatBtn").addEventListener("click", () => {
     if (!confirm("Voulez-vous vraiment supprimer tous les fichiers du chat ?")) return;
-	 document.getElementById("resultDeleteChat").innerText = '';
+    document.getElementById("resultDeleteChat").innerText = '';
 
     fetch("delete_chat.php", {
         method: "POST",
@@ -198,7 +234,33 @@ document.getElementById("deleteChatBtn").addEventListener("click", () => {
     .then(txt => { document.getElementById("resultDeleteChat").innerText = txt; })
     .catch(err => { document.getElementById("resultDeleteChat").innerText = "Erreur : " + err; });
 });
+
+// 🔹 Gestion de l'activation/désactivation du chat
+document.getElementById("toggleChatBtn").addEventListener("click", () => {
+    fetch("toggle_chat.php", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: "csrf_token=" + encodeURIComponent(csrfToken)
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("chatState").innerText = data.state ? "❌ Désactivé" : "✅ Activé";
+        document.getElementById("toggleChatBtn").innerText = data.state ? "Activer le chat" : "Désactiver le chat";
+        document.getElementById("resultToggleChat").innerText = data.message;
+		// 🕒 Effacer le message après 3 secondes
+        setTimeout(() => {
+            document.getElementById("resultToggleChat").innerText = "";
+        }, 3000);
+    })
+    .catch(err => {
+        document.getElementById("resultToggleChat").innerText = "Erreur : " + err;
+    });
+});
 <?php endif; ?>
+
 
 // 🔹 Gestion de la modale d'aide
 const helpModal = document.getElementById("helpModal");

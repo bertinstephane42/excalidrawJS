@@ -7,6 +7,14 @@ $chatDir = __DIR__ . '/chat';
 $chatFile = $chatDir . '/messages.json';
 $usersFile = $chatDir . '/users.json';
 
+// 🔒 Vérification du lock
+$lockFile = $chatDir . '/chat.lock';
+if (file_exists($lockFile)) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Chat désactivé par l\'administrateur']);
+    exit;
+}
+
 if (!is_dir($chatDir)) mkdir($chatDir, 0755, true);
 if (!file_exists($chatFile)) file_put_contents($chatFile, json_encode([]));
 if (!file_exists($usersFile)) file_put_contents($usersFile, json_encode([]));
