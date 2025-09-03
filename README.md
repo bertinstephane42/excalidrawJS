@@ -22,17 +22,18 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 
 ### 👁️ Visualisation des dessins (`fichiers.php`)
 - 📑 Visualisation et téléchargement des fichiers enregistrés (`dessins/`)  
-- 🛠️ Gestion des fichiers enregistrés (`dessins/`) *(mode admin)*  
+- 🛠️ Suppression des fichiers enregistrés (`dessins/`) *(mode admin)*  
 
 ### 📡 Session live (`voir.php`)
 - 🎥 Visualisation **en temps réel** des dessins générés par un admin  
-- ⏱️ **Synchronisation continue** : chaque trait, forme ou annotation ajoutée par l’admin est diffusé en direct grâce au mécanisme de synchronisation serveur → clients  
-- 💬 **Chat intégré** permettant aux étudiants et à l’admin d’échanger instantanément pendant la session  
-- 🖌️ **Interaction limitée pour les étudiants** : ils peuvent observer le dessin et commenter via le chat, sans pouvoir modifier le contenu directement  
-- 🔒 **Sécurité et contrôle** : l’admin garde le contrôle sur la session, peut réinitialiser le dessin ou gérer les verrous pour éviter les conflits
+- ⏱️ Synchronisation continue : chaque trait, forme ou annotation ajoutée par l’admin est diffusé en direct grâce au mécanisme de synchronisation serveur → clients  
+- 💬 Chat intégré permettant aux étudiants et à l’admin d’échanger instantanément pendant la session  
+- 🖌️ Interaction limitée pour les étudiants : ils peuvent observer le dessin et commenter via le chat, sans pouvoir modifier le contenu directement  
 
 ### 🔧 Gestion du locking (`manage_lock.php`)
-- 🗑️ Suppression manuelle du verrouillage en cas de conflit *(mode admin)*  
+- 🗑️ Suppression manuelle du verrouillage serveur et local en cas de conflit *(mode admin)*
+- 🗑️ Suppression manuelle du chat (messages et utilisateurs) *(mode admin)*
+- 🔒 Supression manuelle du verrouillage local en cas de conflit *(mode étudiant)*
 
 ---
 
