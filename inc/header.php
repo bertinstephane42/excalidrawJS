@@ -3,6 +3,7 @@ if (!isLoggedIn()) {
     header('Location: login.php');
     exit;
 } 
+$currentRole = $_SESSION['role'] ?? 'etudiant';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -22,7 +23,11 @@ if (!isLoggedIn()) {
                 <a class="nav-btn" href="dessin.php">Éditeur</a>
 				<a class="nav-btn" href="voir.php">Session live</a>
                 <a class="nav-btn" href="fichiers.php">Fichiers</a>
-				<a class="adm-btn" href="manage_lock.php">Gérer les verrous</a>
+                <?php if($currentRole === 'admin'): ?>
+                    <a class="adm-btn" href="manage_lock.php">Admin</a>
+                <?php else: ?>
+                    <a class="adm-btn" href="manage_lock.php">Gérer les verrous</a>
+                <?php endif; ?>
                 <a class="nav-btn logout" href="logout.php">Déconnexion</a>
             </nav>
         </div>
