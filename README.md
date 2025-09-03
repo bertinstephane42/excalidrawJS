@@ -48,7 +48,7 @@ excalidraw/
 ├── delete_dessin.php      # Suppression de dessins (admin)
 ├── dessin.php             # Interface de dessin
 ├── fichiers.php           # Gestion des fichiers
-├── get_drawing.php        # Lecture du fichier current.json pour la visionneuse (voir.php)
+├── get_drawing.php        # Lecture du fichier current.json pour la visionneuse
 ├── heartbeat_lock.php     # Vérification/verrouillage concurrentiel
 ├── login.php              # Page de connexion
 ├── logout.php             # Déconnexion
