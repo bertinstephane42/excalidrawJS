@@ -33,6 +33,7 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 ### 🔧 Administration (`manage_lock.php`)
 - 🗑️ Suppression manuelle du verrouillage serveur et local en cas de conflit *(mode admin)*
 - 🗑️ Suppression manuelle du chat (messages et utilisateurs) *(mode admin)*
+- 💬 Activation/désactivation du chat *(mode admin)*
 - 🔒 Supression manuelle du verrouillage local en cas de conflit *(mode étudiant)*
 
 ---
@@ -44,19 +45,20 @@ excalidraw/
 ├── index.php              # Page d'accueil / login
 ├── chat_backend.php       # Gestion du chat
 ├── dashboard.php          # Tableau de bord des utilisateurs
-├── delete_chat.php        # Suppression du chat (admin)
-├── delete_dessin.php      # Suppression de dessins (admin)
+├── delete_chat.php        # Suppression du chat (backend admin)
+├── delete_dessin.php      # Suppression de dessins (backend admin)
 ├── dessin.php             # Interface de dessin
 ├── fichiers.php           # Gestion des fichiers
 ├── get_drawing.php        # Lecture du fichier current.json pour la visionneuse
 ├── heartbeat_lock.php     # Vérification/verrouillage concurrentiel
 ├── login.php              # Page de connexion
 ├── logout.php             # Déconnexion
-├── manage_lock.php        # Administration du locking et/ou du chat
+├── manage_lock.php        # Administration du locking et/ou du chat (backend admin)
 ├── page_ouverte.php       # Gestion des sessions de dessin ouvertes
-├── release_lock.php       # Libération des verrous
+├── release_lock.php       # Libération des verrous (backend admin)
 ├── save_dessin.php        # Sauvegarde des dessins
 ├── save_json.php          # Sauvegarde au format JSON
+├── toggle_chat.php        # Gestion du chat (backend admin)
 ├── view_dessin.php        # Visualisation des dessins
 ├── voir.php               # Visualisation en live des dessins
 │
