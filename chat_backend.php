@@ -7,14 +7,6 @@ $chatDir = __DIR__ . '/chat';
 $chatFile = $chatDir . '/messages.json';
 $usersFile = $chatDir . '/users.json';
 
-// 🔒 Vérification du lock
-$lockFile = $chatDir . '/chat.lock';
-if (file_exists($lockFile)) {
-    http_response_code(403);
-    echo json_encode(['error' => 'Chat désactivé par l\'administrateur']);
-    exit;
-}
-
 if (!is_dir($chatDir)) mkdir($chatDir, 0755, true);
 if (!file_exists($chatFile)) file_put_contents($chatFile, json_encode([]));
 if (!file_exists($usersFile)) file_put_contents($usersFile, json_encode([]));
@@ -60,6 +52,20 @@ if (in_array($action, $secureActions)) {
         echo json_encode(['error' => 'Acces interdit : token invalide']);
         exit;
     }
+}
+
+$lockFile = $chatDir . '/chat.lock';
+if ($action === 'status') {
+    $chatDisabled = file_exists($lockFile);
+    echo json_encode(['disabled' => $chatDisabled]);
+    exit;
+}
+
+// 🔒 Vérification du lock
+if (file_exists($lockFile)) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Chat désactivé par l\'administrateur']);
+    exit;
 }
 
 // --- Login

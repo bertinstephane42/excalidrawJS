@@ -75,7 +75,7 @@ html, body { height: 100%; margin: 0; }
 
 <script>
 const authToken = '<?= $chat_token ?>'; // Token généré côté PHP
-const chatDisabled = <?= $chatDisabled ? 'true' : 'false' ?>;
+let chatDisabled = <?= $chatDisabled ? 'true' : 'false' ?>;
 </script>
 
 <script>
@@ -265,6 +265,43 @@ async function loadMessages() {
     }
 }
 
+// Vérifie régulièrement si le chat est désactivé côté serveur
+async function updateChatStatus() {
+    try {
+        const res = await fetch('chat_backend.php?action=status', {
+            method: 'GET',
+            headers: { 'X-Auth-Token': authToken }
+        });
+        const data = await res.json();
+
+        chatDisabled = data.disabled;
+
+        const toggleBtn = document.getElementById('chatToggle');
+        const disabledIcon = document.querySelector('#headerBar span[title="Chat désactivé"]');
+
+        if (chatDisabled) {
+            // Remplacer le bouton par l’icône désactivée si nécessaire
+            if (toggleBtn) {
+                toggleBtn.outerHTML = `<span title="Chat désactivé" style="font-size:1.4em; color:#d00;">💬🚫</span>`;
+            }
+            if (chatModal) chatModal.style.display = 'none';
+        } else {
+            // Si réactivé dynamiquement → remettre un seul bouton
+            if (disabledIcon) {
+                disabledIcon.outerHTML = `<button id="chatToggle">💬</button>`;
+                // Ré-attacher l’événement toggle
+                document.getElementById('chatToggle').addEventListener('click', () => {
+                    chatModal.style.display = (chatModal.style.display === 'flex') ? 'none' : 'flex';
+                });
+            }
+        }
+    } catch (err) {
+        console.error("Erreur lors de la vérification du statut du chat :", err);
+    }
+}
+
+// Vérifie toutes les 2 secondes
+setInterval(updateChatStatus, 2000);
 setInterval(loadMessages, 2000);
 loadMessages();
 </script>
