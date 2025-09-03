@@ -1,60 +1,97 @@
 <?php
+session_start();
 require_once __DIR__ . '/inc/auth.php';
-if (!isLoggedIn()) { 
-    header('Location: login.php'); 
-    exit; 
-}
+if (!isLoggedIn()) { header('Location: login.php'); exit; }
 
-// --- Dossier de stockage
 $chatDir = __DIR__ . '/chat';
 $chatFile = $chatDir . '/messages.json';
 $usersFile = $chatDir . '/users.json';
 
-// --- Création auto du dossier si nécessaire
-if (!is_dir($chatDir)) {
-    mkdir($chatDir, 0755, true);
-}
+if (!is_dir($chatDir)) mkdir($chatDir, 0755, true);
+if (!file_exists($chatFile)) file_put_contents($chatFile, json_encode([]));
+if (!file_exists($usersFile)) file_put_contents($usersFile, json_encode([]));
 
-// --- Création fichiers si inexistants
-if (!file_exists($chatFile)) {
-    file_put_contents($chatFile, json_encode([]));
-}
-if (!file_exists($usersFile)) {
-    file_put_contents($usersFile, json_encode([]));
-}
+$messages = json_decode(file_get_contents($chatFile), true) ?: [];
+$users = json_decode(file_get_contents($usersFile), true) ?: [];
 
-// --- Charger les messages et utilisateurs
-$messages = json_decode(file_get_contents($chatFile), true);
-if (!is_array($messages)) $messages = [];
+// --- Durée d'inactivité maximale en secondes
+define('MAX_INACTIVITY', 60);
 
-$users = json_decode(file_get_contents($usersFile), true);
-if (!is_array($users)) $users = [];
-
-// --- Action demandée
-$action = $_POST['action'] ?? $_GET['action'] ?? 'list';
-
-// --- Vérifier si login disponible
-if ($action === 'checkLogin') {
-    $login = trim($_GET['login'] ?? '');
-    $ok = ($login !== '' && !in_array($login, $users));
-    if ($ok) {
-        $users[] = $login;
+// --- Nettoyage des utilisateurs inactifs
+function cleanupUsers(&$users, $usersFile) {
+    $changed = false;
+    foreach ($users as $login => $data) {
+        $sess = $data['session_id'] ?? '';
+        // Si la session n'existe plus ou n'est plus active
+        if ($sess && $sess !== session_id() && !file_exists(session_save_path() . "/sess_$sess")) {
+            unset($users[$login]);
+            $changed = true;
+        }
+    }
+    if ($changed) {
         file_put_contents($usersFile, json_encode($users));
     }
-    header('Content-Type: application/json');
-    echo json_encode(['ok' => $ok]);
+}
+
+// --- Mettre à jour l'activité d'un utilisateur
+function updateUserActivity(&$users, $login, $usersFile) {
+    $users[$login] = [
+        'session_id' => session_id(),
+        'last_active' => time()
+    ];
+    file_put_contents($usersFile, json_encode($users));
+}
+
+// --- Vérification du token pour les actions sécurisées
+$action = $_POST['action'] ?? $_GET['action'] ?? 'list';
+$secureActions = ['send', 'logout', 'list']; // actions à sécuriser
+if (in_array($action, $secureActions)) {
+    $headerToken = $_SERVER['HTTP_X_AUTH_TOKEN'] ?? '';
+    if ($headerToken === '' || $headerToken !== ($_SESSION['chat_token'] ?? '')) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Acces interdit : token invalide']);
+        exit;
+    }
+}
+
+// --- Login
+if ($action === 'login') {
+    $login = trim($_POST['login'] ?? '');
+    
+    // Nettoyage des utilisateurs dont la session n'existe plus
+    foreach ($users as $key => $user) {
+        $sess_file = session_save_path() . "/sess_$user[session_id]";
+        if (!file_exists($sess_file)) {
+            unset($users[$key]);
+        }
+    }
+
+    // Vérifier que le login n'est pas déjà actif dans une session différente
+    if ($login === '' || (isset($users[$login]) && $users[$login]['session_id'] !== session_id())) {
+        echo json_encode(['ok' => false, 'error' => 'Login indisponible']);
+        exit;
+    }
+
+    // Ajouter / mettre à jour l'utilisateur
+    $users[$login] = ['session_id'=>session_id(), 'last_active'=>time()];
+    file_put_contents($usersFile, json_encode($users));
+
+    $_SESSION['login'] = $login;
+    $_SESSION['chat_token'] = $_POST['token'] ?? ($_SESSION['chat_token'] ?? bin2hex(random_bytes(16)));
+
+    echo json_encode(['ok' => true, 'token' => $_SESSION['chat_token']]);
     exit;
 }
 
-// --- Déconnexion
+// --- Logout
 if ($action === 'logout') {
-    $login = trim($_POST['login'] ?? '');
-    if (($key = array_search($login, $users)) !== false) {
-        unset($users[$key]);
-        $users = array_values($users);
+    $login = $_POST['login'] ?? $_SESSION['login'] ?? '';
+    if ($login !== '' && isset($users[$login])) {
+        unset($users[$login]);
         file_put_contents($usersFile, json_encode($users));
     }
-    header('Content-Type: application/json');
+
+    unset($_SESSION['login'], $_SESSION['chat_token']);
     echo json_encode(['ok' => true]);
     exit;
 }
@@ -63,34 +100,27 @@ if ($action === 'logout') {
 if ($action === 'send') {
     $login = trim($_POST['login'] ?? '');
     $message = trim($_POST['message'] ?? '');
-
     if ($login !== '' && $message !== '') {
-        $messages[] = [
-            'login' => htmlspecialchars($login, ENT_QUOTES, 'UTF-8'),
-            'message' => htmlspecialchars($message, ENT_QUOTES, 'UTF-8'),
-            'time' => date('H:i:s')
-        ];
+        updateUserActivity($users, $login, $usersFile);
 
-        // Limiter le fichier à 200 derniers messages
-        if (count($messages) > 200) {
-            $messages = array_slice($messages, -200);
-        }
-
+        $messages[] = ['login'=>htmlspecialchars($login),'message'=>htmlspecialchars($message),'time'=>date('H:i:s')];
+        if (count($messages)>200) $messages = array_slice($messages,-200);
         file_put_contents($chatFile, json_encode($messages));
     }
-
-    header('Content-Type: application/json');
-    echo json_encode(['status' => 'ok']);
+    echo json_encode(['status'=>'ok']);
     exit;
 }
 
-// --- Liste des messages
+// --- Liste messages
 if ($action === 'list') {
-    header('Content-Type: application/json');
+    $login = $_SESSION['login'] ?? '';
+    if ($login !== '') {
+        updateUserActivity($users, $login, $usersFile);
+    }
+    cleanupUsers($users, $usersFile);
     echo json_encode($messages);
     exit;
 }
 
-// --- Action inconnue
 http_response_code(400);
-echo json_encode(['error' => 'Action invalide']);
+echo json_encode(['error'=>'Action invalide']);

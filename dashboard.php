@@ -7,6 +7,7 @@ if (!isLoggedIn()) {
 }
 
 include 'inc/header.php';
+$currentRole = $_SESSION['role'] ?? 'etudiant';
 ?>
 
 <div class="main-app dashboard">
@@ -16,7 +17,11 @@ include 'inc/header.php';
         <a class="dash-btn" href="dessin.php">Ouvrir l'éditeur de dessin</a>
          <a class="dash-btn" href="voir.php">Voir le live</a>
         <a class="dash-btn" href="fichiers.php">Voir les dessins enregistrés</a>
-         <a class="dashadm-btn" href="manage_lock.php">Gérer les verrous</a>
+		 <?php if($currentRole === 'admin'): ?>
+			<a class="dashadm-btn" href="manage_lock.php">Admin</a>
+         <?php else: ?>
+            <a class="dashadm-btn" href="manage_lock.php">Gérer les verrous</a>
+         <?php endif; ?>
         <a class="dash-btn logout" href="logout.php">Se déconnecter</a>
     </div>
 </div>
