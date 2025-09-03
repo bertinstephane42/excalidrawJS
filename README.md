@@ -30,7 +30,7 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 - 💬 Chat intégré permettant aux étudiants et à l’admin d’échanger instantanément pendant la session  
 - 🖌️ Interaction limitée pour les étudiants : ils peuvent observer le dessin et commenter via le chat, sans pouvoir modifier le contenu directement  
 
-### 🔧 Gestion du locking (`manage_lock.php`)
+### 🔧 Administration (`manage_lock.php`)
 - 🗑️ Suppression manuelle du verrouillage serveur et local en cas de conflit *(mode admin)*
 - 🗑️ Suppression manuelle du chat (messages et utilisateurs) *(mode admin)*
 - 🔒 Supression manuelle du verrouillage local en cas de conflit *(mode étudiant)*
@@ -52,7 +52,7 @@ excalidraw/
 ├── heartbeat_lock.php     # Vérification/verrouillage concurrentiel
 ├── login.php              # Page de connexion
 ├── logout.php             # Déconnexion
-├── manage_lock.php        # Administration - gestion du lock partiel (etudiant) - gestion du lock et du chat (admin)
+├── manage_lock.php        # Administration du locking et/ou du chat
 ├── page_ouverte.php       # Gestion des sessions de dessin ouvertes
 ├── release_lock.php       # Libération des verrous
 ├── save_dessin.php        # Sauvegarde des dessins
