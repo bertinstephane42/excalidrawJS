@@ -339,7 +339,7 @@ include __DIR__ . '/inc/header.php';
     <span id="statusTool">Outil : Sélection</span>
     <span id="statusDim">0 × 0</span>
   </div>
- <div id="helpModal" class="modal">
+<div id="helpModal" class="modal">
   <div class="modal-content">
     <span id="closeHelp" class="close">&times;</span>
     <h2>Guide des outils</h2>
@@ -371,28 +371,31 @@ include __DIR__ . '/inc/header.php';
       <li><b>Flèches clavier :</b> déplacer finement l’objet sélectionné (1px).</li>
       <li><b>SHIFT + Flèches :</b> déplacement rapide (10px).</li>
       <li>
-		  <b>ALT + lettre :</b> changer d’outil rapidement :
-		  <ul style="list-style-type: disc; margin-left: 20px;">
-			<li><b>ALT+V</b> : Sélection</li>
-			<li><b>ALT+R</b> : Rectangle</li>
-			<li><b>ALT+O</b> : Ellipse</li>
-			<li><b>ALT+L</b> : Ligne</li>
-			<li><b>ALT+A</b> : Flèche</li>
-			<li><b>ALT+P</b> : Pinceau</li>
-			<li><b>ALT+T</b> : Texte</li>
-		  </ul>
-		</li>
+        <b>ALT + lettre :</b> changer d’outil rapidement :
+        <ul style="list-style-type: disc; margin-left: 20px;">
+          <li><b>ALT+V</b> : Sélection</li>
+          <li><b>ALT+R</b> : Rectangle</li>
+          <li><b>ALT+O</b> : Ellipse</li>
+          <li><b>ALT+L</b> : Ligne</li>
+          <li><b>ALT+A</b> : Flèche</li>
+          <li><b>ALT+P</b> : Pinceau</li>
+          <li><b>ALT+T</b> : Texte</li>
+        </ul>
+      </li>
       <li><b>SHIFT + redimensionnement :</b> conserver les proportions d’un objet.</li>
+      <li style="color:#d33; font-weight:bold;">
+	  ⚠️ Limitation : le redimensionnement “magnétique à la grille” ne fonctionne correctement que si vous utilisez le <span style="text-decoration: underline; color:#000;">coin en haut à gauche</span>. Les autres coins peuvent provoquer un léger déplacement de l’objet.
+	</li>
     </ul>
 
     <p style="margin-top:10px; font-size:0.9em; color:#666;">
       Astuce : combine les outils et raccourcis pour gagner du temps. Ex. : ALT pour te déplacer pendant que tu ajoutes plusieurs formes.
     </p>
     
-	<p style="margin-top:10px; font-size:0.9em; color:#d33; font-weight:bold;">
-	  ⚠️ Important : pour éviter tout problème (canevas non vidé, session encore active, verrouillage non libéré), il est impératif de cliquer sur le bouton <b>"Quitter"</b> lorsque vous avez terminé. 
-	  Le bouton <b>"Quitter"</b> réinitialisera automatiquement le canevas et vous redirigera vers le dashboard. Ne quittez pas la page autrement.
-	</p>
+    <p style="margin-top:10px; font-size:0.9em; color:#d33; font-weight:bold;">
+      ⚠️ Important : pour éviter tout problème (canevas non vidé, session encore active, verrouillage non libéré), il est impératif de cliquer sur le bouton <b>"Quitter"</b> lorsque vous avez terminé. 
+      Le bouton <b>"Quitter"</b> réinitialisera automatiquement le canevas et vous redirigera vers le dashboard. Ne quittez pas la page autrement.
+    </p>
   </div>
 </div>
 </div>
@@ -1006,11 +1009,28 @@ applySize(width, height);
   saveState();
 
 	function finalizeObject(obj){
-		// on ajoute l'objet mais on ne l'active pas automatiquement
-		canvas.discardActiveObject(); 
-		obj.setCoords();
-		canvas.requestRenderAll();
-		setActiveTool('select'); // bascule automatique sur sélection
+	  if (!obj) return;
+
+	  // Recentrer l’origine pour éviter le déplacement au resize
+	  const center = obj.getCenterPoint();
+	  obj.set({
+		originX: 'center',
+		originY: 'center',
+		left: center.x,
+		top: center.y
+	  });
+
+	  // Mise à jour des coordonnées
+	  obj.setCoords();
+
+	  // On enlève la sélection courante
+	  canvas.discardActiveObject(); 
+
+	  // Rendu
+	  canvas.requestRenderAll();
+
+	  // Bascule automatique sur outil sélection
+	  setActiveTool('select');
 	}
 
   // --- Drawing primitives ---
@@ -1316,22 +1336,33 @@ applySize(width, height);
 	});
 
 	// --- 4. Aimantation sur redimensionnement
-	canvas.on('object:scaling', function (options) {
+	canvas.on('object:scaling', function(options) {
 	  const obj = options.target;
 	  if (!obj.width || !obj.height) return;
 
-	  if (obj.type === 'group') {
-		// On applique le scaling global du groupe sur la grille
-		const newScaleX = Math.round((obj.scaleX * obj.width) / grid) * grid / obj.width;
-		const newScaleY = Math.round((obj.scaleY * obj.height) / grid) * grid / obj.height;
-		obj.scaleX = newScaleX || obj.scaleX;
-		obj.scaleY = newScaleY || obj.scaleY;
-		obj.setCoords();
-	  } else {
-		const newScaleX = Math.round((obj.scaleX * obj.width) / grid) * grid / obj.width;
-		const newScaleY = Math.round((obj.scaleY * obj.height) / grid) * grid / obj.height;
-		obj.set({ scaleX: newScaleX || obj.scaleX, scaleY: newScaleY || obj.scaleY });
-	  }
+	  // Nouvelles échelles arrondies à la grille
+	  const newScaleX = Math.round((obj.scaleX * obj.width) / grid) * grid / obj.width || obj.scaleX;
+	  const newScaleY = Math.round((obj.scaleY * obj.height) / grid) * grid / obj.height || obj.scaleY;
+
+	  // Calcul du décalage pour compenser le redimensionnement selon la poignée utilisée
+	  const offsetX = (newScaleX - obj.scaleX) * obj.width / 2;
+	  const offsetY = (newScaleY - obj.scaleY) * obj.height / 2;
+
+	  // Rotation en radians
+	  const angle = obj.angle * (Math.PI / 180);
+	  const rotatedOffsetX = offsetX * Math.cos(angle) - offsetY * Math.sin(angle);
+	  const rotatedOffsetY = offsetX * Math.sin(angle) + offsetY * Math.cos(angle);
+
+	  // Appliquer le scaling
+	  obj.set({ scaleX: newScaleX, scaleY: newScaleY });
+
+	  // Ajuster la position pour compenser le déplacement
+	  obj.set({
+		left: obj.left - rotatedOffsetX,
+		top: obj.top - rotatedOffsetY
+	  });
+
+	  obj.setCoords();
 	});
 	
 	// Clic sur le bouton pour ouvrir le sélecteur de fichier

@@ -168,67 +168,81 @@ function createChatModal() {
 function attachChatEvents() {
     // Toggle du chat
     chatToggle = document.getElementById('chatToggle');
-    if (chatToggle) {
+    if (chatToggle && !chatToggle.dataset.bound) {
         chatToggle.onclick = () => {
             chatModal.style.display = (chatModal.style.display === 'flex') ? 'none' : 'flex';
         };
+        chatToggle.dataset.bound = "true"; // évite double binding
     }
 
     // Déconnexion
-    chatLogout.addEventListener('click', async () => {
-        if (!connected) return;
-        if (!confirm("Déconnexion du chat ?")) return;
-        const login = chatLogin.value.trim();
-        await fetch('chat_backend.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ action: 'logout', login })
+    if (chatLogout && !chatLogout.dataset.bound) {
+        chatLogout.addEventListener('click', async () => {
+            if (!connected) return;
+            if (!confirm("Déconnexion du chat ?")) return;
+            const login = chatLogin.value.trim();
+            await fetch('chat_backend.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ action: 'logout', login })
+            });
+            localStorage.removeItem('chatLogin');
+            chatLogin.value = '';
+            chatLogin.disabled = false;
+            chatMessages.innerHTML = '';
+            chatInput.value = '';
+            connected = false;
         });
-        localStorage.removeItem('chatLogin');
-        chatLogin.value = '';
-        chatLogin.disabled = false;
-        chatMessages.innerHTML = '';
-        chatInput.value = '';
-        connected = false;
-    });
+        chatLogout.dataset.bound = "true";
+    }
 
     // Envoi de message / login
-    chatForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const login = chatLogin.value.trim();
-        const msg = chatInput.value.trim();
-        if (!login) { alert("Veuillez entrer un login."); return; }
-        if (!msg) return;
-        if (chatDisabled) { alert("Chat désactivé par l'administrateur"); chatInput.value = ''; return; }
+    if (chatForm && !chatForm.dataset.bound) {
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const login = chatLogin.value.trim();
+            const msg = chatInput.value.trim();
+            if (!login) { alert("Veuillez entrer un login."); return; }
+            if (!msg) return;
+            if (chatDisabled) { 
+                alert("Chat désactivé par l'administrateur"); 
+                chatInput.value = ''; 
+                return; 
+            }
 
-        // Login si pas encore connecté
-        if (!connected) {
-            const res = await fetch('chat_backend.php?action=login', {
+            // Login si pas encore connecté
+            if (!connected) {
+                const res = await fetch('chat_backend.php?action=login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Auth-Token': authToken
+                    },
+                    body: new URLSearchParams({ login })
+                });
+                const data = await res.json();
+                if (!data.ok) { 
+                    alert(data.error || "Impossible de se connecter"); 
+                    return; 
+                }
+                localStorage.setItem('chatLogin', login);
+                chatLogin.disabled = true;
+                connected = true;
+            }
+
+            // Envoi du message
+            await fetch('chat_backend.php?action=send', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-Auth-Token': authToken
                 },
-                body: new URLSearchParams({ login })
+                body: new URLSearchParams({ login, message: msg })
             });
-            const data = await res.json();
-            if (!data.ok) { alert(data.error || "Impossible de se connecter"); return; }
-            localStorage.setItem('chatLogin', login);
-            chatLogin.disabled = true;
-            connected = true;
-        }
-
-        // Envoi du message
-        await fetch('chat_backend.php?action=send', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-Auth-Token': authToken
-            },
-            body: new URLSearchParams({ login, message: msg })
+            chatInput.value = '';
         });
-        chatInput.value = '';
-    });
+        chatForm.dataset.bound = "true";
+    }
 }
 
 // --- Récupère les messages ---
@@ -291,10 +305,6 @@ function initChat() {
     chatStatusInterval = setInterval(updateChatStatus, 2000);
     chatMessagesInterval = setInterval(() => { if (connected) loadMessages(); }, 2000);
 }
-
 // --- Démarrage si chat activé ---
-if (!window.chatInitialized) {
-    initChat();
-    window.chatInitialized = true;
-}
+initChat();
 </script>
