@@ -10,9 +10,13 @@ $dir = __DIR__ . '/dessins';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Vérification CSRF
-    if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
-        die("Token CSRF invalide");
-    }
+	 if (
+		empty($_SESSION['csrf_token']) ||
+		empty($_POST['csrf_token']) ||
+		!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+	) {
+		die("Token CSRF invalide");
+	}
 
     // Vérification du fichier envoyé en POST
     if (!empty($_POST['file'])) {

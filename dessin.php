@@ -469,8 +469,7 @@ include __DIR__ . '/inc/header.php';
   let gridGroup = null; // variable globale pour stocker la grille
     // -- Redimensionnement fiable de .canvas-wrap
   const wrap = canvasEl.parentElement; // .canvas-wrap
-  
-  
+    
 	function calculateOptimalSize() {
 	  const containerRect = wrap.getBoundingClientRect();
 	  const width = Math.max(CANVAS_MIN_WIDTH, containerRect.width);
@@ -480,52 +479,31 @@ include __DIR__ . '/inc/header.php';
 
 	let isDrawingGrid = false;
 
-	function drawGrid() {
-	  // Supprimer les anciennes lignes de grille
-	  if (gridGroup) {
-		canvas.remove(gridGroup);
-	  }
-	  const width = Math.floor(canvas.getWidth());
-	  const height = Math.floor(canvas.getHeight());
+	function drawGrid(gridSize = 20, color = "#ccc") {
+	  // Création d’un canvas temporaire
+	  const gridCanvas = document.createElement("canvas");
+	  gridCanvas.width = gridSize;
+	  gridCanvas.height = gridSize;
+	  const ctx = gridCanvas.getContext("2d");
 
-	  const cols = Math.floor(width / grid);
-	  const rows = Math.floor(height / grid);
+	  // Tracer les lignes horizontale et verticale
+	  ctx.strokeStyle = color;
+	  ctx.lineWidth = 1;
 
-	  const lines = [];
+	  ctx.beginPath();
+	  ctx.moveTo(gridSize, 0);
+	  ctx.lineTo(gridSize, gridSize);
+	  ctx.lineTo(0, gridSize);
+	  ctx.stroke();
 
-	  // Colonnes
-	  for (let i = 0; i <= cols; i++) {
-		const x = i * grid;
-		lines.push(new fabric.Line([x, 0, x, height], {
-		  stroke: '#ccc',
-		  selectable: false,
-		  evented: false
-		}));
-	  }
-
-	  // Lignes
-	  for (let i = 0; i <= rows; i++) {
-		const y = i * grid;
-		lines.push(new fabric.Line([0, y, width, y], {
-		  stroke: '#ccc',
-		  selectable: false,
-		  evented: false
-		}));
-	  }
-
-	  // Créer un groupe figé et non interactif
-	  gridGroup = new fabric.Group(lines, {
-		selectable: false,
-		evented: false,
-		hasControls: false,
-		lockMovementX: true,
-		lockMovementY: true,
-		excludeFromExport: true
+	  // Utiliser ce mini-canevas comme pattern
+	  const pattern = new fabric.Pattern({
+		source: gridCanvas,
+		repeat: "repeat"
 	  });
 
-	  canvas.add(gridGroup);
-	  gridGroup.sendToBack();
-	  canvas.renderAll();
+	  // Définir le fond de la zone Fabric.js
+	  canvas.setBackgroundColor(pattern, canvas.renderAll.bind(canvas));
 	}
 
 	function saveState(){
@@ -838,6 +816,15 @@ applySize(width, height);
 			canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
 			canvas.freeDrawingBrush.width = parseInt(strokeWidth.value, 10) || 2;
 			canvas.freeDrawingBrush.color = strokeColor.value;
+		}
+		
+	    // --- AJOUT : gestion de la sélection en fonction de l’outil ---
+		if (['rect','ellipse','line','arrow','diamond','text','freedraw'].includes(tool)) {
+			canvas.selection = false;
+			canvas.forEachObject(obj => obj.selectable = false);
+		} else {
+			canvas.selection = true;
+			canvas.forEachObject(obj => obj.selectable = true);
 		}
 
 		// Mise à jour des boutons

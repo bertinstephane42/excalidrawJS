@@ -22,7 +22,10 @@ foreach ($files as $file) {
     elseif (str_starts_with($name, 'bts2') && isset($sections['bts2'][$ext])) $sections['bts2'][$ext][] = $file;
     elseif (str_starts_with($name, 'lic3') && isset($sections['lic3'][$ext])) $sections['lic3'][$ext][] = $file;
 }
-$csrfToken = $_SESSION['csrf_token'] ?? '';
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
 ?>
 
 <div class="main-app">
