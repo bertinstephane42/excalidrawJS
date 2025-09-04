@@ -117,7 +117,7 @@ if ($action === 'send') {
     if ($login !== '' && $message !== '') {
         updateUserActivity($users, $login, $usersFile);
 
-        $messages[] = ['login'=>htmlspecialchars($login),'message'=>htmlspecialchars($message),'time'=>date('H:i:s')];
+        $messages[] = ['login'=>$login,'message'=>$message,'time'=>date('H:i:s')];
         if (count($messages)>200) $messages = array_slice($messages,-200);
         file_put_contents($chatFile, json_encode($messages));
     }
