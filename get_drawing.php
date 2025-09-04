@@ -21,10 +21,36 @@ if (extension_loaded('zlib') && !ini_get('zlib.output_compression')) {
     ob_start('ob_gzhandler');
 }
 
-// Forcer le type de contenu JSON compressible
+// Forcer le type de contenu JSON
 header('Content-Type: application/json; charset=UTF-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
-// Lire et envoyer
-readfile($jsonPath);
+// Récupérer le dernier mtime envoyé par le client
+$clientMtime = isset($_GET['mtime']) ? (int)$_GET['mtime'] : 0;
+$serverMtime = filemtime($jsonPath);
+
+// Si le fichier n’a pas changé → renvoyer juste l’état
+if ($clientMtime >= $serverMtime) {
+    echo json_encode([
+        'unchanged' => true,
+        'mtime' => $serverMtime
+    ]);
+    exit;
+}
+
+// Sinon → lire le JSON complet
+$content = file_get_contents($jsonPath);
+$data = json_decode($content, true);
+if ($data === null) {
+    http_response_code(500);
+    echo json_encode(['error' => 'JSON invalide']);
+    exit;
+}
+
+// Renvoi du JSON complet + timestamp
+echo json_encode([
+    'unchanged' => false,
+    'mtime' => $serverMtime,
+    'data' => $data
+]);
 exit;

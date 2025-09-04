@@ -1,307 +1,300 @@
 <?php
-session_start(); // Toujours au tout début
+session_start();
 require_once __DIR__ . '/inc/auth.php';
-
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+if (!isLoggedIn()) { header('Location: login.php'); exit; }
 
 include __DIR__ . '/inc/header.php';
 
-// Générer le token seulement s'il n'existe pas
 if (!isset($_SESSION['chat_token'])) {
     $_SESSION['chat_token'] = bin2hex(random_bytes(16));
 }
 $chat_token = $_SESSION['chat_token'];
-$lockFile = __DIR__ . '/chat/chat.lock';
-$chatDisabled = file_exists($lockFile);
+$chatDisabled = file_exists(__DIR__ . '/chat/chat.lock');
 ?>
 
 <style>
-html, body { height: 100%; margin: 0; }
-#c { border: 1px solid #ccc; display: block; }
-#headerBar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; }
-#chatToggle { background: #007bff; color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
-#chatModal { display: none; position: fixed; bottom: 20px; right: 20px; width: 300px; height: 400px; background: #fff; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 1000; flex-direction: column; }
-#chatHeader { display:flex; justify-content:space-between; align-items:center; padding:4px 8px; border-bottom:1px solid #ccc; background:#f1f1f1; border-radius: 10px 10px 0 0; }
+html, body { height:100%; margin:0; }
+#c { border:1px solid #ccc; display:block; }
+#headerBar { display:flex; justify-content:space-between; align-items:center; padding:10px 20px; }
+#chatToggle { background:#007bff; color:#fff; border:none; border-radius:50%; width:40px; height:40px; font-size:18px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.3); }
+#chatMessages { flex:1; padding:10px; overflow-y:auto; font-size:14px; background:#f9f9f9; }
+#chatModal { display:none; position:fixed; bottom:20px; right:20px; width:300px; height:400px; background:#fff; border:1px solid #ccc; border-radius:10px; box-shadow:0 2px 6px rgba(0,0,0,0.3); z-index:1000; flex-direction:column; }
+#chatHeader { display:flex; justify-content:space-between; align-items:center; padding:4px 8px; border-bottom:1px solid #ccc; background:#f1f1f1; border-radius:10px 10px 0 0; }
 #chatLogout { background:none; border:none; cursor:pointer; font-size:16px; color:#666; }
 #chatLogout:hover { color:#d00; }
-#chatMessages { flex: 1; padding: 10px; overflow-y: auto; font-size: 14px; background: #f9f9f9; }
-#chatForm { display: flex; border-top: 1px solid #ccc; }
-#chatForm input[type="text"] { flex: 1; border: none; padding: 8px; font-size: 14px; }
-#chatForm button { background: #007bff; color: #fff; border: none; padding: 8px 12px; cursor: pointer; }
-#chatLogin { display: block; width: 100%; box-sizing: border-box; border: none; border-bottom: 1px solid #ccc; padding: 8px; font-size: 14px; }
+#chatForm { display:flex; border-top:1px solid #ccc; }
+#chatForm input[type=text] { flex:1; border:none; padding:8px; font-size:14px; }
+#chatForm button { background:#007bff; color:#fff; border:none; padding:8px 12px; cursor:pointer; }
+#chatLogin { display:block; width:100%; box-sizing:border-box; border:none; border-bottom:1px solid #ccc; padding:8px; font-size:14px; }
 </style>
 
 <div id="headerBar">
     <h2>Visionneuse de dessin</h2>
-    <?php if (!$chatDisabled): ?>
-        <button id="chatToggle">💬</button>
-    <?php else: ?>
-      <span title="Chat désactivé" style="font-size:1.4em; color:#d00;">
-        💬🚫
-	  </span>
-    <?php endif; ?>
+    <span id="chatContainer">
+        <?php if($chatDisabled): ?>
+            <span title="Chat désactivé" style="font-size:1.4em; color:#d00;">💬🚫</span>
+        <?php else: ?>
+            <button id="chatToggle">💬</button>
+        <?php endif; ?>
+    </span>
 </div>
 
 <canvas id="c"></canvas>
 
-<!-- Modale de chat -->
-<?php if (!$chatDisabled): ?>
-	<div id="chatModal">
-		<div id="chatHeader">
-			<span>💬 Chat</span>
-			<button id="chatLogout" title="Déconnexion">❌</button>
-		</div>
-		<input type="text" id="chatLogin" placeholder="Votre login">
-		<div id="chatMessages"></div>
-		<form id="chatForm">
-			<input type="text" id="chatInput" placeholder="Votre message...">
-			<button type="submit">➤</button>
-		</form>
-	</div>
-<?php endif; ?>
-
 <script src="https://cdn.jsdelivr.net/npm/fabric@5.2.4/dist/fabric.min.js"></script>
 <script>
-<!-- Fallback local si le CDN échoue -->
-  if (typeof fabric === "undefined") {
-    var script = document.createElement("script");
-    script.src = "js/fabric.min.js"; // copie locale
-    document.head.appendChild(script);
-  }
-</script>
+let fabricLoaded = false;
+let canvas, lastMTime = 0;
+let isFetching = false;
+let refreshInterval = 2000; // intervalle initial
 
-<script>
-const authToken = '<?= $chat_token ?>'; // Token généré côté PHP
-let chatDisabled = <?= $chatDisabled ? 'true' : 'false' ?>;
-</script>
+// Fonction principale pour charger et mettre à jour le dessin
+async function loadJSON() {
+    if (!fabricLoaded || isFetching) return;
+    isFetching = true;
 
-<script>
-const canvas = new fabric.Canvas('c', {
-    selection: false,
-    interactive: false,   // interdit toute interaction
-    backgroundColor: '#ffffff',
-    preserveObjectStacking: true
-});
+    try {
+        const res = await fetch('get_drawing.php?_='+Date.now()+'&mtime='+lastMTime, {
+            headers:{'X-Requested-With':'XMLHttpRequest'}
+        });
+        if(!res.ok) throw new Error('Erreur serveur');
 
-// verrouillage total des objets
+        const result = await res.json();
+
+        if (!result.unchanged) {
+            // Mise à jour du dessin
+            lastMTime = result.mtime;
+            canvas.loadFromJSON(result.data, () => {
+                lockAllObjects();
+                canvas.renderAll();
+                const first = canvas.getObjects()[0];
+                canvas.setWidth(first?.canvasWidth||1800);
+                canvas.setHeight(first?.canvasHeight||900);
+            });
+            refreshInterval = 2000; // reset interval normal
+        } else {
+            // Aucun changement → ralentir encore
+            refreshInterval = 7000; // 7 secondes
+        }
+    } catch(e){
+        console.error(e);
+        // En cas d'erreur serveur, temporiser pour éviter répétition rapide
+        refreshInterval = 10000; // 10 secondes
+    } finally {
+        isFetching = false;
+        // Prochain appel après intervalle adaptatif
+        setTimeout(loadJSON, refreshInterval);
+    }
+}
+
+// Verrouillage des objets
 function lockAllObjects() {
-    canvas.getObjects().forEach(obj => {
-        obj.selectable = false;
-        obj.evented = false;
-        obj.hasControls = false;
-        obj.lockMovementX = true;
-        obj.lockMovementY = true;
-        obj.lockScalingX = true;
-        obj.lockScalingY = true;
-        obj.lockRotation = true;
+    canvas.getObjects().forEach(obj=>{
+        obj.selectable = obj.evented = obj.hasControls = false;
+        obj.lockMovementX = obj.lockMovementY = obj.lockScalingX = obj.lockScalingY = obj.lockRotation = true;
     });
 }
 
-// charger le dessin depuis PHP (lecture seule)
-async function loadJSON() {
-    try {
-        const response = await fetch('get_drawing.php?_=' + Date.now(), {
-			headers: { 'X-Requested-With': 'XMLHttpRequest' }
-		});
-        if (!response.ok) throw new Error("Erreur serveur");
-
-        const json = await response.json();
-
-        canvas.loadFromJSON(json, () => {
-            lockAllObjects();
-            canvas.renderAll();
-
-            // ajuster la taille
-            const first = canvas.getObjects()[0];
-            if (first?.canvasWidth && first?.canvasHeight) {
-                canvas.setWidth(first.canvasWidth);
-                canvas.setHeight(first.canvasHeight);
-            } else {
-                canvas.setWidth(1800);
-                canvas.setHeight(900);
-            }
-        });
-    } catch (err) {
-        console.error("Impossible de charger le dessin :", err);
-    } finally {
-        setTimeout(loadJSON, 2000); // rafraîchit toutes les 5s
-    }
+// Initialisation de Fabric
+function initFabric() {
+    if (canvas) return;
+    canvas = new fabric.Canvas('c', { selection:false, interactive:false, backgroundColor:'#fff', preserveObjectStacking:true });
+    fabricLoaded = true;
+    // Démarrer la boucle après init
+    loadJSON();
 }
-// démarrage
-loadJSON();
 
-// --- JS du chat simplifié et fonctionnel
+// Chargement de Fabric si nécessaire
+if (typeof fabric === "undefined") {
+    const script = document.createElement('script');
+    script.src = 'js/fabric.min.js';
+    script.onload = initFabric;
+    document.head.appendChild(script);
+} else {
+    initFabric();
+}
+</script>
 
-const chatToggle = document.getElementById('chatToggle');
-const chatModal = document.getElementById('chatModal');
-const chatLogin = document.getElementById('chatLogin');
-const chatMessages = document.getElementById('chatMessages');
-const chatForm = document.getElementById('chatForm');
-const chatInput = document.getElementById('chatInput');
-const chatLogout = document.getElementById('chatLogout');
-
+<script>
+const authToken = '<?= $chat_token ?>';
+let chatDisabled = <?= $chatDisabled ? 'true' : 'false' ?>;
 let connected = false;
 
-// --- toggle modal
-chatToggle.addEventListener('click', () => {
-    chatModal.style.display = (chatModal.style.display === 'flex') ? 'none' : 'flex';
-});
+let chatModal, chatLogin, chatMessages, chatForm, chatInput, chatLogout, chatToggle;
 
-// --- logout
-chatLogout.addEventListener('click', async () => {
-    if (!connected) return;
-    if (!confirm("Déconnexion du chat ?")) return;
+// --- Création de la modale chat ---
+function createChatModal() {
+    if (document.getElementById('chatModal')) return;
 
-    const login = chatLogin.value.trim();
-    await fetch('chat_backend.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ action: 'logout', login })
-    });
+    chatModal = document.createElement('div');
+    chatModal.id = 'chatModal';
+    chatModal.style.display = 'none';
+    chatModal.style.flexDirection = 'column';
+    chatModal.style.position = 'fixed';
+    chatModal.style.bottom = '20px';
+    chatModal.style.right = '20px';
+    chatModal.style.width = '300px';
+    chatModal.style.height = '400px';
+    chatModal.style.background = '#fff';
+    chatModal.style.border = '1px solid #ccc';
+    chatModal.style.borderRadius = '10px';
+    chatModal.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+    chatModal.style.zIndex = '1000';
+    chatModal.style.display = 'flex';
+    chatModal.style.flexDirection = 'column';
 
-    localStorage.removeItem('chatLogin');
-    chatLogin.value = '';
-    chatLogin.disabled = false;
-    chatMessages.innerHTML = '';
-    chatInput.value = '';
-    connected = false;
-});
+    chatModal.innerHTML = `
+        <div id="chatHeader" style="display:flex; justify-content:space-between; align-items:center; padding:4px 8px; border-bottom:1px solid #ccc; background:#f1f1f1; border-radius:10px 10px 0 0;">
+            <span>💬 Chat</span>
+            <button id="chatLogout" title="Déconnexion">❌</button>
+        </div>
+        <input type="text" id="chatLogin" placeholder="Votre login" style="width:100%; box-sizing:border-box; border:none; border-bottom:1px solid #ccc; padding:8px; font-size:14px;">
+        <div id="chatMessages" style="flex:1; overflow-y:auto; padding:5px; font-size:14px; background:#f9f9f9;"></div>
+        <form id="chatForm" style="display:flex; border-top:1px solid #ccc;">
+            <input type="text" id="chatInput" placeholder="Votre message..." style="flex:1; padding:5px;">
+            <button type="submit">➤</button>
+        </form>
+    `;
+    document.body.appendChild(chatModal);
 
-// --- soumission message
-chatForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const login = chatLogin.value.trim();
-    const msg = chatInput.value.trim();
-    if (!login) { alert("Veuillez entrer un login."); return; }
-    if (!msg) return;
-	
-	// Vérifier si le chat a été désactivé dynamiquement
-    if (chatDisabled) {
-        alert("Chat désactivé par l'administrateur"); // même message que pour login
-        chatInput.value = '';
-        return;
+    chatLogin = document.getElementById('chatLogin');
+    chatMessages = document.getElementById('chatMessages');
+    chatForm = document.getElementById('chatForm');
+    chatInput = document.getElementById('chatInput');
+    chatLogout = document.getElementById('chatLogout');
+}
+
+// --- Attache les événements ---
+function attachChatEvents() {
+    // Toggle du chat
+    chatToggle = document.getElementById('chatToggle');
+    if (chatToggle) {
+        chatToggle.onclick = () => {
+            chatModal.style.display = (chatModal.style.display === 'flex') ? 'none' : 'flex';
+        };
     }
 
-    // --- connexion si nécessaire
-    if (!connected) {
-        try {
+    // Déconnexion
+    chatLogout.addEventListener('click', async () => {
+        if (!connected) return;
+        if (!confirm("Déconnexion du chat ?")) return;
+        const login = chatLogin.value.trim();
+        await fetch('chat_backend.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ action: 'logout', login })
+        });
+        localStorage.removeItem('chatLogin');
+        chatLogin.value = '';
+        chatLogin.disabled = false;
+        chatMessages.innerHTML = '';
+        chatInput.value = '';
+        connected = false;
+    });
+
+    // Envoi de message / login
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const login = chatLogin.value.trim();
+        const msg = chatInput.value.trim();
+        if (!login) { alert("Veuillez entrer un login."); return; }
+        if (!msg) return;
+        if (chatDisabled) { alert("Chat désactivé par l'administrateur"); chatInput.value = ''; return; }
+
+        // Login si pas encore connecté
+        if (!connected) {
             const res = await fetch('chat_backend.php?action=login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Auth-Token': authToken // <-- Header sécurisé
+                    'X-Auth-Token': authToken
                 },
                 body: new URLSearchParams({ login })
             });
-
             const data = await res.json();
-            if (!data.ok) {
-                alert(data.error || "Impossible de se connecter");
-                return;
-            }
-
-            // Stocker le login et verrouiller le champ
+            if (!data.ok) { alert(data.error || "Impossible de se connecter"); return; }
             localStorage.setItem('chatLogin', login);
             chatLogin.disabled = true;
             connected = true;
-
-        } catch (err) {
-            console.error("Erreur de connexion :", err);
-            alert("Erreur de connexion. Réessayez.");
-            return;
         }
-    }
 
-    // --- envoi message
-    try {
+        // Envoi du message
         await fetch('chat_backend.php?action=send', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'X-Auth-Token': authToken // <-- Header sécurisé
+                'X-Auth-Token': authToken
             },
             body: new URLSearchParams({ login, message: msg })
         });
-
         chatInput.value = '';
-        loadMessages();
+    });
+}
 
-    } catch (err) {
-        console.error("Erreur lors de l'envoi du message :", err);
-    }
-});
-
-// --- chargement messages
+// --- Récupère les messages ---
 async function loadMessages() {
+    if (!connected || chatDisabled) return;
     try {
-        const res = await fetch('chat_backend.php?action=list', {
-            method: 'GET',
-            headers: {
-                'X-Auth-Token': authToken // <-- Header sécurisé
-            }
-        });
-
-        if (!res.ok) {
-            console.error("Erreur lors de la récupération des messages :", res.statusText);
-            return;
-        }
-
+        const res = await fetch('chat_backend.php?action=list', { headers: { 'X-Auth-Token': authToken } });
+        if (!res.ok) throw new Error(res.statusText);
         const data = await res.json();
         chatMessages.innerHTML = '';
-
         data.forEach(m => {
-            const div = document.createElement('div');
-            div.textContent = `[${m.time}] ${m.login}: ${m.message}`;
-            chatMessages.appendChild(div);
+            const d = document.createElement('div');
+            d.textContent = `[${m.time}] ${m.login}: ${m.message}`;
+            chatMessages.appendChild(d);
         });
-
         chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    } catch(err) {
-        console.error("Erreur dans loadMessages :", err);
+    } catch (e) {
+        console.error("Erreur loadMessages", e);
     }
 }
 
-// Vérifie régulièrement si le chat est désactivé côté serveur
+// --- Vérifie le statut du chat ---
 async function updateChatStatus() {
     try {
-        const res = await fetch('chat_backend.php?action=status', {
-            method: 'GET',
-            headers: { 'X-Auth-Token': authToken }
-        });
+        const res = await fetch('chat_backend.php?action=status', { headers: { 'X-Auth-Token': authToken } });
         const data = await res.json();
-
+        const prevDisabled = chatDisabled;
         chatDisabled = data.disabled;
-
-        const toggleBtn = document.getElementById('chatToggle');
-        const disabledIcon = document.querySelector('#headerBar span[title="Chat désactivé"]');
+        const container = document.getElementById('chatContainer');
 
         if (chatDisabled) {
-            // Remplacer le bouton par l’icône désactivée si nécessaire
-            if (toggleBtn) {
-                toggleBtn.outerHTML = `<span title="Chat désactivé" style="font-size:1.4em; color:#d00;">💬🚫</span>`;
-            }
-            if (chatModal) chatModal.style.display = 'none';
-        } else {
-            // Si réactivé dynamiquement → remettre un seul bouton
-            if (disabledIcon) {
-                disabledIcon.outerHTML = `<button id="chatToggle">💬</button>`;
-                // Ré-attacher l’événement toggle
-                document.getElementById('chatToggle').addEventListener('click', () => {
-                    chatModal.style.display = (chatModal.style.display === 'flex') ? 'none' : 'flex';
-                });
-            }
+            container.innerHTML = `<span title="Chat désactivé" style="font-size:1.4em; color:#d00;">💬🚫</span>`;
+            chatModal && (chatModal.style.display = 'none');
+        } else if (prevDisabled && !chatDisabled) {
+            container.innerHTML = `<button id="chatToggle">💬</button>`;
+            attachChatEvents(); // ré-attache le toggle
         }
-    } catch (err) {
-        console.error("Erreur lors de la vérification du statut du chat :", err);
-    }
+    } catch (e) { console.error("Erreur updateChatStatus", e); }
 }
 
-// Vérifie toutes les 2 secondes
-setInterval(updateChatStatus, 2000);
-setInterval(loadMessages, 2000);
-loadMessages();
+let chatStatusInterval = null;
+let chatMessagesInterval = null;
+
+function initChat() {
+    if (window.chatInitialized) return; // évite les multiples inits
+    window.chatInitialized = true;
+
+    createChatModal();
+    attachChatEvents();
+
+    const savedLogin = localStorage.getItem('chatLogin');
+    if (savedLogin && !chatDisabled) {
+        chatLogin.value = savedLogin;
+        chatLogin.disabled = true;
+        connected = true;
+        loadMessages();
+    }
+
+    // Lancer les intervalles une seule fois
+    chatStatusInterval = setInterval(updateChatStatus, 2000);
+    chatMessagesInterval = setInterval(() => { if (connected) loadMessages(); }, 2000);
+}
+
+// --- Démarrage si chat activé ---
+if (!window.chatInitialized) {
+    initChat();
+    window.chatInitialized = true;
+}
 </script>
