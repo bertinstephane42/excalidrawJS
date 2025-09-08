@@ -9,6 +9,8 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 ### ⚙️ Générale
 - 🔐 Authentification utilisateur (connexion / déconnexion)  (`login.php`, `logout.php`)
 - 🛡️ Protection des répertoires sensibles via `.htaccess` (`inc/`)  
+- 🚫 Système **anti-bruteforce** intégré à l’authentification (`login.php`, `inc/auth.php`)
+- 📝 **Journalisation des connexions** pour tracer les accès réussis et les tentatives échouées
 
 ### ⚙️ Tableau de bord (`dashboard.php`)  
 - 📊 Affichage des différents outils
@@ -35,6 +37,8 @@ Une application de dessin collaboratif inspirée d'Excalidraw, développée en *
 - 🗑️ Suppression manuelle du chat (messages et utilisateurs) *(mode admin)*
 - 💬 Activation/désactivation du chat *(mode admin)*
 - 🔒 Supression manuelle du verrouillage local en cas de conflit *(mode étudiant)*
+- 👥 **Gestion intégrée des utilisateurs** *(mode admin)* : ajout, suppression, activation/désactivation, changement de rôle et de mot de passe
+- 📜 **Consultation du journal des connexions** *(mode admin)* : affichage en temps réel des logs de connexion
 
 ---
 
@@ -50,6 +54,7 @@ excalidraw/
 ├── dessin.php             # Interface de dessin
 ├── fichiers.php           # Gestion des fichiers
 ├── get_drawing.php        # Lecture du fichier current.json pour la visionneuse
+├── get-logs.php           # Lecture du fichier users.log
 ├── heartbeat_lock.php     # Vérification/verrouillage concurrentiel
 ├── login.php              # Page de connexion
 ├── logout.php             # Déconnexion
@@ -108,12 +113,14 @@ excalidraw/
    * `json/`
    * `lock/`
 
-4. Configurer un utilisateur dans `inc/users.php` si nécessaire.
+4. Comptes par défaut dans `inc/users.php` :
+   * login : admin / password : admin (rôle : admin)
+   * login : etudiant / password : etudiant (rôle : user) 
 
-5. Accéder à l’application via :
+6. Accéder à l’application via :
 
    ```
-   http://localhost/excalidraw/
+   http://localhost/excalidrawjs/
    ```
 
 ---
@@ -127,7 +134,7 @@ excalidraw/
 
 ## 📌 Sécurité
 
-* Les répertoires sensibles (`dessins/`, `json/`, `lock/`, `inc/`) sont protégés par `.htaccess`.
+* Les répertoires sensibles (`dessins/`, `json/`, `lock/`, `inc/`, `logs/`) sont protégés par `.htaccess`.
 * Vérifier la configuration de votre serveur Apache pour que la directive `AllowOverride All` soit activée.
 
 ---
