@@ -100,7 +100,6 @@ function changeUserPassword(string $username, string $newPassword): array {
 
     // Hash sécurisé
     $all[$username]['password'] = password_hash($newPassword, PASSWORD_DEFAULT);
-	error_log("DEBUG: Nouveau hash pour $username = " . $all[$username]['password']);
 
     // Sauvegarde et mise à jour globale
     $ok = saveUsers($all);
@@ -238,4 +237,5 @@ function logout(): void {
     session_destroy();
     header('Location: login.php');
     exit;
+
 }
