@@ -4,9 +4,19 @@ require_once 'inc/auth.php';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (login($_POST['username'], $_POST['password'])) {
+    $username = trim($_POST['username']);
+    $password = $_POST['password'];
+
+    $loginResult = login($username, $password);
+
+    if ($loginResult === true) {
+        // Connexion réussie
         header('Location: dashboard.php');
         exit;
+    } elseif ($loginResult === 'disabled') {
+        $error = 'Compte désactivé. Contactez l’administrateur.';
+    } elseif ($loginResult === 'timeout') {
+        $error = "Trop de tentatives. Veuillez attendre " . LOGIN_TIMEOUT . " secondes.";
     } else {
         $error = 'Identifiants incorrects.';
     }
@@ -73,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($error): ?>
             <p class="error-msg"><?= htmlspecialchars($error) ?></p>
         <?php endif; ?>
-        <form method="post">
+        <form method="post" novalidate>
             <input type="text" name="username" placeholder="Identifiant" required>
             <input type="password" name="password" placeholder="Mot de passe" required>
             <button type="submit">Se connecter</button>
