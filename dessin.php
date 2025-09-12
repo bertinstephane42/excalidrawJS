@@ -1232,12 +1232,38 @@ applySize(width, height);
 	  document.body.removeChild(a);
 	}
 
+	// Fonction générique pour exporter (supprime/restitue la grille temporairement)
+	function withCleanCanvas(exportFn) {
+	  const bg = canvas.backgroundColor; // sauvegarder le pattern de grille
+	  canvas.setBackgroundColor(null, canvas.renderAll.bind(canvas));
+
+	  const result = exportFn(); // exécuter l’export
+
+	  canvas.setBackgroundColor(bg, canvas.renderAll.bind(canvas)); // remettre la grille
+	  return result;
+	}
+
 	// Export PNG
+	function exportAsPNG() {
+	  return withCleanCanvas(() => canvas.toDataURL({
+		format: 'png',
+		multiplier: 2,
+		enableRetinaScaling: true
+	  }));
+	}
+
+	// Export SVG
+	function exportAsSVG() {
+	  return withCleanCanvas(() => canvas.toSVG());
+	}
+
+	// --- Écouteurs d’événements --- //
 	document.getElementById('exportPNG').addEventListener('click', () => {
-		if (!confirm("Voulez-vous vraiment exporter ce dessin en PNG ?")) {
-			return;
-		  }
-	  const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 2, enableRetinaScaling: true });
+	  if (!confirm("Voulez-vous vraiment exporter ce dessin en PNG ?")) {
+		return;
+	  }
+
+	  const dataUrl = exportAsPNG();
 	  const filename = generateFilename("png");
 
 	  // Téléchargement côté client
@@ -1247,12 +1273,12 @@ applySize(width, height);
 	  saveToServer("png", dataUrl);
 	});
 
-	// Export SVG
 	document.getElementById('exportSVG').addEventListener('click', () => {
-		if (!confirm("Voulez-vous vraiment exporter ce dessin en SVG ?")) {
-			return;
-		}
-	  const svg = canvas.toSVG();
+	  if (!confirm("Voulez-vous vraiment exporter ce dessin en SVG ?")) {
+		return;
+	  }
+
+	  const svg = exportAsSVG();
 	  const filename = generateFilename("svg");
 	  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
 	  const url = URL.createObjectURL(blob);
@@ -1299,19 +1325,6 @@ applySize(width, height);
 
   // Sélection par défaut
   setActiveTool('select');
-
-	// --- 2. Ajout d'objets de test ---
-	/*const rect = new fabric.Rect({
-	  left: 100, top: 100,
-	  width: 60, height: 60,
-	  fill: 'skyblue'
-	});
-	const circle = new fabric.Circle({
-	  left: 200, top: 150,
-	  radius: 30,
-	  fill: 'lightgreen'
-	});
-	canvas.add(rect, circle);*/
 
 	// --- 3. Aimantation sur la grille (position)
 	canvas.on('object:moving', function (options) {
